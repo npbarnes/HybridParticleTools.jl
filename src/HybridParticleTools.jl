@@ -1,5 +1,14 @@
 module HybridParticleTools
+export Sensors, Trajectory, Parameters, Simulation, touching, Distribution, distributions
 
-greet() = print("Hello World!")
+include("Utility.jl")
+include("Simulations.jl")
+include("Spacecraft.jl")
+include("Sensors.jl")
+
+using .Simulations
+using .Spacecraft
+using .Sensors
+
 
 end # module
