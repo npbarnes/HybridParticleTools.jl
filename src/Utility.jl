@@ -16,4 +16,4 @@ function listofmatrices(arr::AbstractArray{T,3}) where T
     SMatrix{3,3,T,9}.(eachslice(arr,dims=1))
 end
 
-end
+end # module
