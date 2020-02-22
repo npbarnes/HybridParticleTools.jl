@@ -8,6 +8,7 @@ using Unitful
 
 using ..Simulations
 using ..Spacecraft
+using ..SphericalPolygons
 
 # Get moments from a distribution
 density(f::Distribution) = sum(f.ns)
