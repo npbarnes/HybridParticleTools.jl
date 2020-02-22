@@ -19,18 +19,18 @@ const st = pyimport("spice_tools")
     @testset "Sensors tests" begin
         test_kT = 1.5u"eV"
         m = 4*m_p
-        N = 10000
+        N = 1000
         maxwl = Distribution(
             [(test_kT/m)^(1/2).*randn(3) .+ [5.0,0.,0.]u"km/s" for _ in 1:N],
             [m for _ in 1:N],
             [e for _ in 1:N],
             [1.0 for _ in 1:N]u"m^-3"
         )
-        bulk_v = Sensors.bulkvelocity(maxwl)
+        bulk_v = bulkvelocity(maxwl)
         @test isapprox(bulk_v[1], 5u"km/s", rtol=0.1)
         @test isapprox(bulk_v[2], 0u"km/s", atol=1u"km/s")
         @test isapprox(bulk_v[3], 0u"km/s", atol=1u"km/s")
-        @test isapprox(Sensors.thermalenergy(maxwl), test_kT, rtol=0.1)
+        @test isapprox(thermalenergy(maxwl), test_kT, rtol=0.1)
     end
 
 end
