@@ -1,5 +1,7 @@
 module HybridParticleTools
-export Sensors, Trajectory, Parameters, Simulation, touching, Distribution, distributions
+export  Trajectory, Parameters, Simulation, touching, Distribution,
+        density, bulkvelocity, pressuretensor, pressure, thermalenergy,
+        energyspectrogram, flythrough
 
 include("Utility.jl")
 include("Simulations.jl")
