@@ -259,5 +259,24 @@ function Distribution(s::Simulation, x::AbstractVector{<:Number}, dx=s.dx*u"km")
     end
     Distribution(s.vs[t], s.ms[t], s.qs[t], ns)
 end
+Base.IteratorSize(::Type{Distribution{U,V,W,X}}) where {U,V,W,X} = Base.HasShape{1}()
+Base.length(d::Distribution) = length(d.vs)
+Base.size(d::Distribution) = (length(d),)
+Base.size(d::Distribution, dim::Integer) = dim == 1 ? length(d) : 1
+function Base.iterate(d::Distribution)
+    if length(d) == 0
+        return nothing
+    else
+        return ((d.vs[1], d.ms[1], d.qs[1], d.ns[1]), 2)
+    end
+end
+function Base.iterate(d::Distribution, i)
+    if i > length(d)
+        return nothing
+    else
+        return ((d.vs[i], d.ms[i], d.qs[i], d.ns[i]), i+1)
+    end
+end
+Base.isempty(d::Distribution) = length(d) == 0
 
 end # module
