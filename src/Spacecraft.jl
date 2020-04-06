@@ -4,23 +4,26 @@ export Trajectory
 
 using PyCall
 using StaticArrays
+using StructArrays
 using Unitful
 
 using ..Utility
 
-
-struct Trajectory{T,U,V}
-    pos::Vector{SVector{3,T}}
-    cmat::Vector{SMatrix{3,3,U,9}}
-    times::Vector{V}
-    function Trajectory(pos::AbstractVector{<:AbstractVector{<:Number}}, cmat::AbstractVector{<:AbstractMatrix{<:Number}}, times::AbstractVector{<:Number})
-        N = length(times)
-        if length(pos) != N || length(cmat) != N
-            error("The lists must have the same lengths")
-        end
-        new{eltype(eltype(pos)), eltype(eltype(cmat)), eltype(times)}(pos, cmat, times)
-    end
+struct SpacecraftState{T,U,V}
+    pos::SVector{3,T}
+    cmat::SMatrix{3,3,U,9}
+    time::V
 end
+const Trajectory = StructArray{SpacecraftState{T,U,V}} where {T,U,V}
+function Trajectory(p::AbstractArray, c::AbstractArray, t::AbstractArray)
+    Trajectory{
+        eltype(eltype(p)),
+        eltype(eltype(c)),
+        eltype(t)
+    }((p,c,t))
+end
+Base.show(io::IO, ::Type{<:Trajectory}) = print(io, "Trajectory")
+
 function Trajectory(start::Number, stop::Number, step::Number)
     spice_tools = pyimport("spice_tools")
     o = pycall(spice_tools.trajectory, PyObject, start, stop, step)

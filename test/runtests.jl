@@ -14,7 +14,7 @@ const st = pyimport("spice_tools")
         @test s.tree isa KDTree
         @test touching(s,[0,0,0]u"km") == touching(s,[0,0,0]u"km",s.dx)
         @test Distribution(s,[0.,0.,0.]u"km") isa Distribution
-        @test Distribution.(s,[[0.,0.,0.], [1.,1.,1.]]u"km") isa Vector{Distribution{U,V,W,X}} where {U,V,W,X}
+        @test Distribution.(s,[[0.,0.,0.], [1.,1.,1.]]u"km") isa Vector{<:Distribution}
     end
     @testset "Sensors tests" begin
         test_kT = 1.5u"eV"

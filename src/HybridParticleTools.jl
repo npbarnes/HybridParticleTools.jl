@@ -4,12 +4,15 @@ export  Trajectory, Parameters, Simulation, touching, Distribution,
         energyspectrogram, flythrough
 
 include("Utility.jl")
-include("SphericalPolygons.jl")
+include("SphericalShapes.jl")
+include("ParameterSets.jl")
 include("Simulations.jl")
+include("Distributions.jl")
 include("Spacecraft.jl")
 include("Sensors.jl")
 
 using .Simulations
+using .Distributions
 using .Spacecraft
 using .Sensors
 
