@@ -9,6 +9,12 @@ using Unitful
 
 using ..Utility
 
+const st = PyNULL()
+
+function __init__()
+    copy!(st, pyimport("spice_tools"))
+end
+
 struct SpacecraftState{T,U,V}
     pos::SVector{3,T}
     cmat::SMatrix{3,3,U,9}
@@ -24,8 +30,7 @@ function Trajectory(p::AbstractArray, c::AbstractArray, t::AbstractArray)
 end
 
 function Trajectory(start::Number, stop::Number, step::Number)
-    spice_tools = pyimport("spice_tools")
-    o = pycall(spice_tools.trajectory, PyObject, start, stop, step)
+    o = pycall(st.trajectory, PyObject, start, stop, step)
     pypos = get(o, PyArray, 0)
     pycmat = get(o, PyArray, 1)
 
