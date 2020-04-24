@@ -11,6 +11,7 @@ struct DistElement{U,V,W,X}
     m::V
     q::W
     n::X
+    t::Tag
 end
 Base.show(io::IO, e::DistElement) = print(io, "DistElement(v=SA[$(e.v[1]),$(e.v[2]),$(e.v[3])], m=$(e.m), q=$(e.q), n=$(e.n))")
 const Distribution = StructArray{DistElement{U,V,W,X}} where {U,V,W,X}
@@ -34,13 +35,13 @@ function Base.show(io::IO, ::MIME"text/plain", d::Distribution)
         end
     end
 end
-function Distribution(v::AbstractArray,m::AbstractArray,q::AbstractArray,n::AbstractArray)
+function Distribution(v::AbstractArray,m::AbstractArray,q::AbstractArray,n::AbstractArray,t::AbstractArray)
     Distribution{
         eltype(eltype(v)),
         eltype(m),
         eltype(q),
         eltype(n)
-    }((v,m,q,n))
+    }((v,m,q,n,t))
 end
 
 function weight(x,xp,dx)
@@ -55,13 +56,14 @@ function Distribution(s::Simulation, x::AbstractVector{<:Quantity}, dx=s.dx*u"km
     for (i,(xp,N)) in enumerate(zip(s.x[t],s.N[t]))
         n[i] = N*weight(x,xp,dx)
     end
-    Distribution(s.v[t], s.m[t], s.q[t], n)
+    Distribution(s.v[t], s.m[t], s.q[t], n, s.t[t])
 end
 Base.:*(cmat::AbstractMatrix, d::Distribution) = Distribution(
     [cmat * v for v in d.vs],
     d.ms,
     d.qs,
-    d.ns
+    d.ns,
+    d.t
 )
 
 end # module

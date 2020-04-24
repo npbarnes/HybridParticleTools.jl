@@ -1,6 +1,6 @@
 module Simulations
 
-export ParameterSet, Simulation, touching, Distribution, distributions
+export ParameterSet, Simulation, touching, Distribution, distributions, Tag, dummy, H_sw, He_sw, H_ipui, He_ipui, CH4_photo, CH4_stagnant, CH4_chex
 
 using PyCall
 using NearestNeighbors: KDTree, inrange
@@ -29,33 +29,45 @@ function usual_mrat_breakdown(mrat)
     (ms,qs)
 end
 
+@enum Tag begin
+    dummy=0
+    H_sw=1
+    He_sw=2
+    H_ipui=3
+    He_ipui=4
+    CH4_photo=5
+    CH4_stagnant=6
+    CH4_chex=7
+end
+
 struct MacroParticle{T,U,V,W,X}
     x::SVector{3,T}
     v::SVector{3,U}
     m::V
     q::W
     N::X
+    t::Tag
 end
 const ParticleData = StructArray{MacroParticle{T,U,V,W,X}} where {T,U,V,W,X}
-function ParticleData(x::AbstractArray,v::AbstractArray,m::AbstractArray,q::AbstractArray,N::AbstractArray)
+function ParticleData(x::AbstractArray,v::AbstractArray,m::AbstractArray,q::AbstractArray,N::AbstractArray,t::AbstractArray)
     ParticleData{
         eltype(eltype(x)),
         eltype(eltype(v)),
         eltype(m),
         eltype(q),
         eltype(N)
-    }((x,v,m,q,N))
+    }((x,v,m,q,N,t))
 end
 
 mutable struct Simulation{T,U,V,W,X}
     para::ParameterSet
     particles::ParticleData{T,U,V,W,X}
     tree::KDTree
-    function Simulation(para, xs, vs, ms, qs, Ns)
+    function Simulation(para, xs, vs, ms, qs, Ns, ts)
         # Leave the tree field undefined
         # the tree field will be defined when it is accessed
         # (see getproperty for this type)
-        new{eltype(eltype(xs)), eltype(eltype(vs)), eltype(ms), eltype(qs), eltype(Ns)}(para,ParticleData(xs,vs,ms,qs,Ns))
+        new{eltype(eltype(xs)), eltype(eltype(vs)), eltype(ms), eltype(qs), eltype(Ns)}(para,ParticleData(xs,vs,ms,qs,Ns,ts))
     end
 end
 
@@ -70,7 +82,9 @@ function Simulation(o::PyObject, separate_mrat=usual_mrat_breakdown)
     Ns = 1 ./ o.beta
     para = ParameterSet(o."para")
 
-    Simulation(para, xs, vs, ms, qs, Ns)
+    ts = Tag.(Int.(o.tags))
+
+    Simulation(para, xs, vs, ms, qs, Ns, ts)
 end
 function Simulation(path; n=0, buildtree=false)
     hpr = pyimport("HybridParticleReader")
