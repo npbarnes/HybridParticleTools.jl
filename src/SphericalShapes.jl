@@ -1,8 +1,11 @@
 module SphericalShapes
-export SphericalShape, SphericalPolygon, Rotated, area, contains
+export SphericalShape, SphericalPolygon, SPolygon, SCircle, Rotated, area, contains, vertices, edges, corners
 
+using PyCall
 using StaticArrays
 using LinearAlgebra
+
+using ..Utility
 
 function circular_index(a, i)
     N = length(a)
@@ -139,7 +142,7 @@ function intersection(A,B,C,D)
     end
 end
 
-struct Rotated{SS, M} <: AbstractSPolygon where {SS<:AbstractSPolygon, M<:AbstractMatrix}
+struct Rotated{SS, M} <: SphericalPolygon where {SS<:SphericalPolygon, M<:AbstractMatrix}
     sp::SS
     m::M
 end
@@ -148,6 +151,22 @@ area(r::Rotated) = area(r.sp)
 inside(r::Rotated) = r.m * inside(r.sp)
 vertices(r::Rotated) = [r.m * v for v in vertices(r.sp)]
 
-SphericalPolygon(r::Rotated) = SphericalPolygon(inside(r), collect(vertices(r)))
+SPolygon(r::Rotated) = SPolygon(inside(r), collect(vertices(r)))
+
+struct SCircle{T,U} <: SphericalShape
+    center::SVector{3,T}
+    cosangle::U
+    function SCircle(center,angle)
+        @assert a >= 0 && a <= π
+        new{eltype(c),typeof(a)}(c./norm(c),cos(a))
+    end
+end
+area(c::SCircle) = 2π*(1-c.cosangle)
+function contains(c::SCircle, P)
+    P = P ./ norm(P)
+    cosine = c.center ⋅ P
+    return cosine >= c.cosangle
+end
+
 
 end # module
