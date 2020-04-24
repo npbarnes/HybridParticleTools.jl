@@ -1,6 +1,6 @@
 module Spacecraft
 
-export Trajectory
+export Trajectory, position, fov_polygon
 
 using PyCall
 using StaticArrays
@@ -8,6 +8,7 @@ using StructArrays
 using Unitful
 
 using ..Utility
+using ..SphericalShapes
 
 const st = PyNULL()
 
@@ -39,4 +40,11 @@ function Trajectory(start::Number, stop::Number, step::Number)
     times = get(o, 2)*u"s"
     return Trajectory(pos, cmat, times)
 end
+
+function fov_polygon(inst, et, frame="HYBRID_SIMULATION_INTERNAL")
+    SPolygon(st.fov_polygon(inst, et, frame))
+end
+
+position(et) = st.coordinate_at_time(et)*u"km"
+
 end # module
