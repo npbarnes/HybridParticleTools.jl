@@ -37,39 +37,39 @@ area(::NoSphere) = zero(T)
 contains(::NoSphere) = false
 
 "Abstract Spherical Polygons have edges that are great circles"
-abstract type AbstractSPolygon <: SphericalShape end
-function inside(::AbstractSPolygon) end
-function vertices(::AbstractSPolygon) end
-function edges(ss::AbstractSPolygon)
+abstract type SphericalPolygon <: SphericalShape end
+function inside(::SphericalPolygon) end
+function vertices(::SphericalPolygon) end
+function edges(ss::SphericalPolygon)
     v = vertices(ss)
     ((v[i], circular_index(v,i+1)) for i in eachindex(v))
 end
-function corners(ss::AbstractSPolygon)
+function corners(ss::SphericalPolygon)
     v = vertices(ss)
     ((circular_index(v,i-1), v[i], circular_index(v,i+1))
         for i in eachindex(v))
 end
 
 """
-    contains(sp::AbstractSPolygon, P)
-Check if the point P is contained in the SphericalPolygon.
+    contains(sp::SphericalPolygon, P)
+Check if the point P is contained in the SPolygon.
 It works by considering the arc between the known inside point and P. If this
 arc intersects edges of the polygon and even number of times (including zero),
 then P is inside. If the arc intersects the edges of the polygon an odd number
 of times, then P is outside.
 """
-function contains(sp::AbstractSPolygon, P)
+function contains(sp::SphericalPolygon, P)
     P = P ./ norm(P)
     I = (intersection(A,B,P,inside(sp)) for (A,B) in edges(sp))
     return count(!isnothing, I) % 2 == 0
 end
 
 """
-    area(sp::SphericalPolygon)
+    area(sp::SPolygon)
 Compute the area of a convex spherical polygon.
 If sp is concave the result is meaningless.
 """
-function area(sp::AbstractSPolygon)
+function area(sp::SphericalPolygon)
     s = sum(x->angle(x...), corners(sp))
     s - π * (length(sp.vertices) - 2)
 end
@@ -86,18 +86,19 @@ A polygon on a sphere
     Of course, if you would like your polygon to have an edge equal to or longer than pi radians
     just use an extra vertex to make it into two edges on the same great circle.
 
-    Some of the methods defined for SphericalPolygons may make additional assumptions. Be sure
+    Some of the methods defined for SPolygons may make additional assumptions. Be sure
     to read their respective documentation.
 """
-struct SphericalPolygon{T<:Number} <: AbstractSPolygon
+struct SPolygon{T<:Number} <: SphericalPolygon
     inside::SVector{3,T}
     vertices::Vector{SVector{3,T}}
-    function SphericalPolygon(inside::AbstractVector{<:Number}, vertices::AbstractVector{<:AbstractVector{<:Number}})
+    function SPolygon(inside::AbstractVector{<:Number}, vertices::AbstractVector{<:AbstractVector{<:Number}})
         new{eltype(inside)}(inside./norm(inside), vertices./norm.(vertices))
     end
 end
-inside(sp::SphericalPolygon) = sp.inside
-vertices(sp::SphericalPolygon) = sp.vertices
+SPolygon(o::PyObject) = SPolygon(o.inside, listofvectors(o.vertices))
+inside(sp::SPolygon) = sp.inside
+vertices(sp::SPolygon) = sp.vertices
 
 """
 Compute angle between the spherical arc AB and the spherical arc BC.
