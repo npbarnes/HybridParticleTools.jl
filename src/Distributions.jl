@@ -48,7 +48,9 @@ function weight(x,xp,dx)
     (abs(1 - abs(x[1]-xp[1])/dx) * abs(1 - abs(x[2]-xp[2])/dx) * abs(1 - abs(x[3]-xp[3])/dx)) / dx^3
 end
 
-function Distribution(s::Simulation, x::AbstractVector{<:Number}, dx=s.dx*u"km")
+"Assume units are kilometers, unless given"
+Distribution(s::Simulation, x::AbstractVector{<:Number}, dx=s.dx) = Distribution(s, x*u"km", dx*u"km")
+function Distribution(s::Simulation, x::AbstractVector{<:Quantity}, dx=s.dx*u"km")
     t = touching(s, x, dx)
     n = similar(s.N[t])*u"km^-3"
     for (i,(xp,N)) in enumerate(zip(s.x[t],s.N[t]))
