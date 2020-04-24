@@ -22,7 +22,6 @@ function Trajectory(p::AbstractArray, c::AbstractArray, t::AbstractArray)
         eltype(t)
     }((p,c,t))
 end
-Base.show(io::IO, ::Type{<:Trajectory}) = print(io, "Trajectory")
 
 function Trajectory(start::Number, stop::Number, step::Number)
     spice_tools = pyimport("spice_tools")
