@@ -1,6 +1,7 @@
 module Utility
-export listofvectors, listofmatrices, geomspace
+export listofvectors, listofmatrices, geomspace, asunitless
 using StaticArrays
+using Unitful
 
 """
     listofvectors(array)
@@ -19,5 +20,7 @@ end
 function geomspace(start, stop, N)
     exp10.(range(log10(start), stop=log10(stop), length=N))
 end
+
+asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size, Q}} = reinterpret(similar_type(SA,Unitful.numtype(Q)), A)
 
 end # module
