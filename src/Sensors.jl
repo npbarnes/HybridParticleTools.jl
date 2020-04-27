@@ -40,7 +40,7 @@ end
 const pepssifov = let
     st = pyimport("spice_tools")
     shape, frame, bsight, n, bounds = st.sp.getfov(-98402, 25, 255, 255)
-    SphericalPolygon(bsight, listofvectors(bounds))
+    SPolygon(bsight, listofvectors(bounds))
 end
 
 function fovfilter(d::Distribution, fov=SphericalShapes.FullSphere())
