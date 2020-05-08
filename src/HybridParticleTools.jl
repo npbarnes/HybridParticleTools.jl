@@ -5,7 +5,7 @@ export  Trajectory, Parameters, Simulation, touching, Distribution,
         Tag, dummy, H_sw, He_sw, H_ipui, He_ipui, CH4_photo, CH4_stagnant, CH4_chex,
         fov_polygon, location
 
-include("PlutoUnits")
+include("PlutoUnits.jl")
 import Unitful
 Unitful.register(PlutoUnits)
 
