@@ -3,7 +3,7 @@ export  Trajectory, Parameters, Simulation, touching, Distribution,
         density, bulkvelocity, pressuretensor, pressure, thermalenergy,
         energyspectrogram, flythrough,
         Tag, dummy, H_sw, He_sw, H_ipui, He_ipui, CH4_photo, CH4_stagnant, CH4_chex,
-        fov_polygon
+        fov_polygon, location
 
 include("PlutoUnits")
 import Unitful

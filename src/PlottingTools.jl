@@ -96,6 +96,6 @@ end
 
 plot_sun(ax) = ax.scatter(mapcoords([[1.,0.,0.]])..., marker="*", edgecolors="k", color="gold", s=200)
 plot_pluto(ax,pos::AbstractArray) = ax.scatter(mapcoords([-ustrip(pos)])..., marker=raw"$♥$",  edgecolors="k", color="chocolate", s=100)
-plot_pluto(ax,et::Number) = plot_pluto(position(et))
+plot_pluto(ax,et::Number) = plot_pluto(location(et))
 
 end # module

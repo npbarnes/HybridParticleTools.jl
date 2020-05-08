@@ -1,6 +1,6 @@
 module Spacecraft
 
-export Trajectory, position, fov_polygon
+export Trajectory, location, fov_polygon
 
 using PyCall
 using StaticArrays
@@ -45,6 +45,6 @@ function fov_polygon(inst, et, frame="HYBRID_SIMULATION_INTERNAL")
     SPolygon(st.fov_polygon(inst, et, frame))
 end
 
-position(et) = st.coordinate_at_time(et)*u"km"
+location(et) = st.coordinate_at_time(et)*u"km"
 
 end # module
