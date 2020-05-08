@@ -5,6 +5,7 @@ using StaticArrays
 using StructArrays
 using Unitful
 using ..Simulations
+using ..SphericalShapes
 
 struct DistElement{U,V,W,X}
     v::SVector{3,U}
@@ -65,5 +66,7 @@ Base.:*(cmat::AbstractMatrix, d::Distribution) = Distribution(
     d.ns,
     d.t
 )
+
+(s::SphericalShape)(e::DistElement) = s(-e.v)
 
 end # module
