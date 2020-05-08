@@ -56,7 +56,7 @@ end
 
 function plotdist(fig, ax, d; marker=".", s=30.0, kwargs...)
    l = -asunitless(d.v)
-   E = ustrip.(uconvert.(u"keV", d.m .* norm.(d.v).^2 ./ 2))
+   E = ustrip(uconvert.(u"keV", energy.(d)))
    mappable = ax.scatter(mapcoords(l)...; marker=marker, s=s, c=E, kwargs...)
    cb = fig.colorbar(mappable)
    cb.set_label("Energy (keV)")
