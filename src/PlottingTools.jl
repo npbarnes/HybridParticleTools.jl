@@ -85,9 +85,9 @@ function mapfigure()
     return fig, ax
 end
 
-fov_polys(et) = [fov_polygon("NH_PEPSSI_S$(i)", et) for i in 0:5]
-function plotpepssi(ax, et)
-    polys = fov_polys(et)
+pepssi_fov_polys(et) = [fov_polygon("NH_PEPSSI_S$(i)", et) for i in 0:5]
+function plot_pepssi(ax, et)
+    polys = pepssi_fov_polys(et)
     plotshape(ax, polys[1], color="blue")
     for p in @view polys[2:end]
         plotshape(ax, p, color="darkgray")
