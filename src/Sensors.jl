@@ -1,6 +1,6 @@
 module Sensors
 export density, bulkvelocity, pressuretensor, pressure, thermalenergy, flux,
-       energy, energypercharge
+       energy, energies, energypercharge
 
 using LinearAlgebra
 using ..Distributions
