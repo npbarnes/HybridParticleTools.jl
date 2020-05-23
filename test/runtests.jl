@@ -1,4 +1,3 @@
-module MyTests
 using HybridParticleTools
 using Test, NearestNeighbors, PyCall, Unitful
 using PhysicalConstants.CODATA2018: m_p, e
@@ -38,5 +37,3 @@ const st = pyimport("spice_tools")
 
     include("boristests.jl")
 end # outer testset
-end # module
-nothing
