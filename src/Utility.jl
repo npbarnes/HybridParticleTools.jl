@@ -1,5 +1,5 @@
 module Utility
-export listofvectors, listofmatrices, geomspace, asunitless
+export listofvectors, listofmatrices, geomspace, asunitless, viewasarray
 using StaticArrays
 using Unitful
 
@@ -23,5 +23,7 @@ end
 
 "No-copy ustrip for Arrays of StaticArrays of Quantities"
 asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size, Q}} = reinterpret(similar_type(SA,Unitful.numtype(Q)), A)
+
+viewasarray(x::AbstractArray{SA,1}) where {S,T,SA<:StaticArray{S,T}} = reshape(reinterpret(T,x), (size(SA)...,:))
 
 end # module
