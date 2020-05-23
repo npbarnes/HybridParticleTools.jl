@@ -3,6 +3,7 @@ module Boris
 export boris, borisstep
 
 using LinearAlgebra
+using ..Distributions
 import PhysicalConstants.CODATA2018: m_p, e
 
 function vstep!(v,dt,E,B)
@@ -43,6 +44,16 @@ function boris(xinit, vinit, dt, E, B, N;m=m_p,q=e)
         ret_x[i+1] = xstep(ret_x[i], dt, ret_v[i+1])
     end
     return ret_x, ret_v
+end
+
+function boris(d::Distribution, xinit, dt, E, B, N)
+    broadcast((x,v,dt,E,B,N,m,q) -> boris(x,v,dt,E,B,N,m=m,q=q),
+        Ref(xinit),
+        d.v,
+        dt,
+        (x,y,z)->E(x,y,z),
+        (x,y,z)->B(x,y,z),
+        N, d.m, d.q)
 end
 
 end # module
