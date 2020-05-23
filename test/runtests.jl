@@ -36,6 +36,7 @@ const st = pyimport("spice_tools")
         @test isapprox(thermalenergy(maxwl), test_kT, rtol=0.1)
     end
 
+    include("boristests.jl")
 end # outer testset
 end # module
 nothing
