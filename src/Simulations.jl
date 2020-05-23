@@ -60,18 +60,19 @@ function ParticleData(x::AbstractArray,v::AbstractArray,m::AbstractArray,q::Abst
 end
 
 mutable struct Simulation{T,U,V,W,X}
+    path::String
     para::ParameterSet
     particles::ParticleData{T,U,V,W,X}
     tree::KDTree
-    function Simulation(para, xs, vs, ms, qs, Ns, ts)
+    function Simulation(path, para, xs, vs, ms, qs, Ns, ts)
         # Leave the tree field undefined
         # the tree field will be defined when it is accessed
         # (see getproperty for this type)
-        new{eltype(eltype(xs)), eltype(eltype(vs)), eltype(ms), eltype(qs), eltype(Ns)}(para,ParticleData(xs,vs,ms,qs,Ns,ts))
+        new{eltype(eltype(xs)), eltype(eltype(vs)), eltype(ms), eltype(qs), eltype(Ns)}(path, para,ParticleData(xs,vs,ms,qs,Ns,ts))
     end
 end
 
-function Simulation(o::PyObject, separate_mrat=usual_mrat_breakdown)
+function _Simulation(path, o::PyObject, separate_mrat=usual_mrat_breakdown)
     ax = PyArray(o."x")
     av = PyArray(o."v")
 
@@ -84,12 +85,12 @@ function Simulation(o::PyObject, separate_mrat=usual_mrat_breakdown)
 
     ts = Tag.(Int.(o.tags))
 
-    Simulation(para, xs, vs, ms, qs, Ns, ts)
+    Simulation(path, para, xs, vs, ms, qs, Ns, ts)
 end
 function Simulation(path; n=0, buildtree=false)
     hpr = pyimport("HybridParticleReader")
     ls = hpr.LastStep(path, n=n)
-    sim = Simulation(ls)
+    sim = _Simulation(path, ls)
     if buildtree
         # Accessing the tree the first time causes it to be constructed
         sim.tree
@@ -108,6 +109,8 @@ function Base.getproperty(s::Simulation, name::Symbol)
         else
             return setfield!(s, :tree, KDTree([ustrip.(u"km",x) for x in s.x], Chebyshev()))
         end
+    elseif name in fieldnames(Simulation)
+        return getfield(s, name)
     else
         error("type $(typeof(s)) has no property $name")
     end
