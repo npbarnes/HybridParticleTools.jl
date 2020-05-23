@@ -40,11 +40,12 @@ function loadfields(prefix, step=-1)
     E = interpolate(nodes, E_data, Gridded(Linear()))
     B = interpolate(nodes, B_data, Gridded(Linear()))
 
-    B_sw = SA[0.0,Float64(para.b0_init),0.0]*u"T"
-    E_sw = -SA[-403.,0.,0.]*u"km/s" × B_sw
+    # Fixed extrapolations are broken in Interpolations.jl
+    #Bsw = SA[0.0, Float64(para.b0_init), 0.0]u"T"
+    #Esw = -SA[-Float64(para.vsw), 0.0, 0.0]u"km/s" × Bsw
 
-    E = extrapolate(E, (Flat(), Periodic(), Periodic()))
-    B = extrapolate(B, (Flat(), Periodic(), Periodic()))
+    E = extrapolate(E, Flat())
+    B = extrapolate(B, Flat())
     return E,B
 end
 
