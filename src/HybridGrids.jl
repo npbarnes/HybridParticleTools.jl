@@ -31,8 +31,10 @@ end
 # There was a problem writing bt data for 2020-Jan-23/pluto-2.
 # Timestep 27 is the last good step.
 function loadfields(prefix, step=-1)
-    E_data = loadvector(prefix, "E", step)*u"km/s^2" * (m_p/e)
-    B_data = loadvector(prefix, "bt", step)*u"s^-1" * (m_p/e)
+    E_data = loadvector(prefix, "E", step)u"km/s^2" * (m_p/e)
+    B_data = loadvector(prefix, "bt", step)u"s^-1" * (m_p/e)
+    E_data = [uconvert.(u"V/m", dat) for dat in E_data]
+    B_data = [uconvert.(u"T", dat) for dat in B_data]
     para = ParameterSet(prefix)
     nodes = Tuple(convert(Array{Float64}, gp)*u"km" for gp in para.grid_points)
     E = interpolate(nodes, E_data, Gridded(Linear()))
