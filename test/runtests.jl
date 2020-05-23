@@ -3,6 +3,8 @@ using HybridParticleTools
 using Test, NearestNeighbors, PyCall, Unitful
 using PhysicalConstants.CODATA2018: m_p, e
 using StaticArrays
+using Random
+const RNG = MersenneTwister(1234)
 
 const st = pyimport("spice_tools")
 
@@ -21,7 +23,7 @@ const st = pyimport("spice_tools")
         m = 4*m_p
         N = 1000
         maxwl = Distribution(
-            [(test_kT/m)^(1/2).*randn(3) .+ [5.0,0.,0.]u"km/s" for _ in 1:N],
+            [(test_kT/m)^(1/2).*randn(RNG, 3) .+ [5.0,0.,0.]u"km/s" for _ in 1:N],
             fill(m,N),
             fill(e,N),
             ones(N)u"m^-3",
