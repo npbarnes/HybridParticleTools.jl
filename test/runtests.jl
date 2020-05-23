@@ -12,7 +12,7 @@ const st = pyimport("spice_tools")
         s = Simulation("/home/nathan/data/chinook/pluto-3")
         @test s isa Simulation
         @test s.tree isa KDTree
-        @test touching(s,[0,0,0]u"km") == touching(s,[0,0,0]u"km",s.dx)
+        @test touching(s,[0,0,0]) == touching(s,[0,0,0]u"km",s.dx*u"km")
         @test Distribution(s,[0.,0.,0.]u"km") isa Distribution
         @test Distribution.(s,[[0.,0.,0.], [1.,1.,1.]]u"km") isa Vector{<:Distribution}
     end
