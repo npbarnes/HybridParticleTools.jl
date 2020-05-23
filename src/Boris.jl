@@ -35,8 +35,11 @@ function boris(xinit, vinit, dt, E, B, N;m=m_p,q=e)
     ret_v = Vector{typeof(vinit)}(undef, N+1)
     ret_x[1] = xinit
     ret_v[1] = vinit
+    qm = q/m
     @inbounds for i in 1:N
-        ret_v[i+1] = vstep(ret_v[i], dt, q/m*E(ret_x[i]...), q/m*B(ret_x[i]...))
+        EE = qm*E(ret_x[i][1], ret_x[i][2], ret_x[i][3])
+        BB = qm*B(ret_x[i][1], ret_x[i][2], ret_x[i][3])
+        ret_v[i+1] = vstep(ret_v[i], dt, EE, BB)
         ret_x[i+1] = xstep(ret_x[i], dt, ret_v[i+1])
     end
     return ret_x, ret_v
