@@ -9,6 +9,7 @@ using Unitful
 
 using ..Utility
 using ..SphericalShapes
+using ..PlutoUnits
 
 const st = PyNULL()
 
@@ -45,6 +46,6 @@ function fov_polygon(inst, et, frame="HYBRID_SIMULATION_INTERNAL")
     SPolygon(st.fov_polygon(inst, et, frame))
 end
 
-location(et) = st.coordinate_at_time(et)*u"km"
+location(et) = uconvert.(u"Rp", st.coordinate_at_time(et)u"km")
 
 end # module
