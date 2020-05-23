@@ -6,9 +6,6 @@ export  Trajectory, Parameters, Simulation, touching, Distribution,
         fov_polygon, location
 
 include("PlutoUnits.jl")
-import Unitful
-Unitful.register(PlutoUnits)
-
 include("Utility.jl")
 include("SphericalShapes.jl")
 include("ParameterSets.jl")
