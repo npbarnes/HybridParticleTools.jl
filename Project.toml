@@ -1,7 +1,7 @@
-name = "HybridParticleTools"
+name = "HybridTools"
 uuid = "9a81e4e1-57d5-4f3e-86b5-fa8eeb89d3c5"
 authors = ["Nathan Barnes <npbarnes@alaska.edu>"]
-version = "0.1.0"
+version = "0.2.0"
 
 [deps]
 Distances = "b4f34e82-e78d-54a5-968a-f98e89d6e8f7"

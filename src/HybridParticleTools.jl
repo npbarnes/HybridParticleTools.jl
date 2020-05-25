@@ -1,4 +1,4 @@
-module HybridParticleTools
+module HybridTools
 export  Trajectory, Parameters, Simulation, touching, Distribution,
         density, bulkvelocity, pressuretensor, pressure, thermalenergy,
         energyspectrogram, flythrough,

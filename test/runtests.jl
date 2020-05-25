@@ -1,4 +1,4 @@
-using HybridParticleTools
+using HybridTools
 using Test, NearestNeighbors, PyCall, Unitful
 using PhysicalConstants.CODATA2018: m_p, e
 using StaticArrays

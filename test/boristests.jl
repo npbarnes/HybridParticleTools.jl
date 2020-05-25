@@ -4,8 +4,8 @@ using LinearAlgebra
 using StaticArrays
 using Plots
 
-using HybridParticleTools.Boris
-using HybridParticleTools.Utility
+using HybridTools.Boris
+using HybridTools.Utility
 
 "x should trace out a circle in xy coordinates, z should be zero"
 function _estimate_gyroradius(x)
