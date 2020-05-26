@@ -5,7 +5,10 @@ export  Trajectory, Parameters, Simulation, touching, Distribution,
         Tag, dummy, H_sw, He_sw, H_ipui, He_ipui, CH4_photo, CH4_stagnant, CH4_chex,
         fov_polygon, location
 
+using Unitful
 include("PlutoUnits.jl")
+Unitful.register(PlutoUnits)
+
 include("Utility.jl")
 include("SphericalShapes.jl")
 include("ParameterSets.jl")
