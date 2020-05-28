@@ -21,9 +21,15 @@ thermalenergy(f::Distribution) = pressure(f)/density(f)
 
 flux(e::DistElement) = norm(e.n .* e.v)
 flux(d::Distribution{U,V,W,X}) where {U,V,W,X} = isempty(d) ? zero(U)*zero(X) : sum(flux, d)
+fluxes(d::Distribution) = flux.(d)
 
 energy(e::DistElement) = (1/2 * e.m * norm(e.v)^2)
 energies(d::Distribution) = energy.(d)
 energypercharge(e::DistElement) = energy(e) / e.q
 
+function differential_intensity(d, fov, Emin, Emax)
+    dd = filter(fov, d)
+    dd = filter(e->Emin <= energy(e) <= Emax, dd)
+    return flux(dd)/(area(fov)*(Emax-Emin))
+end
 end # module
