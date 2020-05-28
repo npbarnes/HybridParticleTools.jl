@@ -54,14 +54,6 @@ function plot_3d_dist(ax, d)
     plot_sphere(ax, 100, 400, alpha=0.6)
 end
 
-function plotdist(fig, ax, d; marker=".", s=30.0, kwargs...)
-   l = -asunitless(d.v)
-   E = ustrip(uconvert.(u"keV", energy.(d)))
-   mappable = ax.scatter(mapcoords(l)...; marker=marker, s=s, c=E, kwargs...)
-   cb = fig.colorbar(mappable)
-   cb.set_label("Energy (keV)")
-end
-
 function plotshape(ax, sp; kwargs...)
    es = collect(Iterators.flatten(edges(sp)))
    ax.plot(mapcoords(es, to_crs=geodetic)...; transform=geodetic, kwargs...)
@@ -94,6 +86,13 @@ function plot_pepssi(ax, et)
     end
 end
 
+function plot_dist(fig, ax, d; marker=".", s=30.0, kwargs...)
+   l = -asunitless(d.v)
+   E = ustrip(uconvert.(u"keV", energy.(d)))
+   mappable = ax.scatter(mapcoords(l)...; marker=marker, s=s, c=E, kwargs...)
+   cb = fig.colorbar(mappable)
+   cb.set_label("Energy (keV)")
+end
 plot_sun(ax) = ax.scatter(mapcoords([[1.,0.,0.]])..., marker="*", edgecolors="k", color="gold", s=200)
 plot_pluto(ax,pos::AbstractArray) = ax.scatter(mapcoords([-ustrip(pos)])..., marker=raw"$♥$",  edgecolors="k", color="chocolate", s=100)
 plot_pluto(ax,et::Number) = plot_pluto(location(et))
