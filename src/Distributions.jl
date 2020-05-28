@@ -15,6 +15,9 @@ struct DistElement{U,V,W,X}
     t::Tag
 end
 Base.show(io::IO, e::DistElement) = print(io, "DistElement(v=SA[$(e.v[1]),$(e.v[2]),$(e.v[3])], m=$(e.m), q=$(e.q), n=$(e.n))")
+hastag(t::Tag, e::DistElement) = (e.t == t)
+hastag(t::Tag) = (e->e.t==t)
+
 const Distribution = StructArray{DistElement{U,V,W,X}} where {U,V,W,X}
 Base.show(io::IO, d::Distribution) = print(io, "$(length(d))-element Distribution...")
 function Base.show(io::IO, ::MIME"text/plain", d::Distribution)
