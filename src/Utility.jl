@@ -1,7 +1,15 @@
 module Utility
-export listofvectors, listofmatrices, geomspace, asunitless, viewasarray
+export  listofvectors, listofmatrices, geomspace, asunitless, viewasarray,
+        @utc2et_str, @utc2datetime_str
 using StaticArrays
 using Unitful
+using PyCall
+
+const st = PyNULL()
+
+function __init__()
+    copy!(st, pyimport("spice_tools"))
+end
 
 """
     listofvectors(array)
@@ -25,5 +33,12 @@ end
 asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size, Q}} = reinterpret(similar_type(SA,Unitful.numtype(Q)), A)
 
 viewasarray(x::AbstractArray{SA,1}) where {S,T,SA<:StaticArray{S,T}} = reshape(reinterpret(T,x), (size(SA)...,:))
+
+macro utc2et_str(t)
+    :(st.sp.str2et("2015-7-14T$($t)"))
+end
+macro utc2datetime_str(t)
+    :(st.et2pydatetime(@pluto_et_str $t))
+end
 
 end # module
