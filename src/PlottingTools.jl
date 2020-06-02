@@ -23,7 +23,20 @@ function __init__()
    copy!(map_projection, ccrs.Mollweide(globe=unit_sphere))
    copy!(vec_coords, map_projection.as_geocentric())
    copy!(geodetic, map_projection.as_geodetic())
+
+   py"""
+   import numpy as np
+   def plot_sphere(ax, r, x_offset=0, **kwargs):
+      u=np.linspace(0,2*np.pi,100)
+      v=np.linspace(0,np.pi,100)
+      x = r * np.outer(np.cos(u), np.sin(v)) - x_offset
+      y = r * np.outer(np.sin(u), np.sin(v))
+      z = r * np.outer(np.ones(np.size(u)), np.cos(v))
+      return ax.plot_surface(x,y,z,**kwargs)
+   """
 end
+
+plot_sphere(ax, r, x_offset=0; kwargs...) = py"plot_sphere"(ax, r, xoffset, kwargs...)
 
 function mapcoords(vs; from_crs=vec_coords, to_crs=map_projection)
    mc = to_crs.transform_points(from_crs,
@@ -33,18 +46,6 @@ function mapcoords(vs; from_crs=vec_coords, to_crs=map_projection)
    )
    @views (mc[:,1], mc[:,2])
 end
-
-py"""
-import numpy as np
-def plot_sphere(ax, r, x_offset=0, **kwargs):
-   u=np.linspace(0,2*np.pi,100)
-   v=np.linspace(0,np.pi,100)
-   x = r * np.outer(np.cos(u), np.sin(v)) - x_offset
-   y = r * np.outer(np.sin(u), np.sin(v))
-   z = r * np.outer(np.ones(np.size(u)), np.cos(v))
-   return ax.plot_surface(x,y,z,**kwargs)
-"""
-plot_sphere(ax, r, x_offset=0; kwargs...) = py"plot_sphere"(ax, r, xoffset, kwargs...)
 
 function plot_3d_dist(ax, d)
     ax.scatter(getindex.(d.v, 1), getindex.(d.v,2), getindex.(d.v,3))
