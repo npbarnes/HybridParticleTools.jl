@@ -34,9 +34,43 @@ function __init__()
       z = r * np.outer(np.ones(np.size(u)), np.cos(v))
       return ax.plot_surface(x,y,z,**kwargs)
    """
+
+   py"""
+   import numpy as np
+   import matplotlib.pyplot as plt
+   from matplotlib.collections import LineCollection
+   from mpl_toolkits.mplot3d import Axes3D
+   from mpl_toolkits.mplot3d.art3d import Line3DCollection
+
+   def _as_segments(coords):
+       points = np.asanyarray(coords).T.reshape(-1,1,len(coords))
+       return np.concatenate([points[:-1], points[1:]], axis=1)
+
+   def coloredline(ax, *args, **kwargs):
+       # coloredline(ax, x, y, [z], c, **kwargs)
+       # plot a line in ax with points x,y,z
+       # c is an array of scalars that are mapped to colors using the usual norm/cmap mechanism.
+       # kwargs are any matplotlib.collections.Collection kwargs e.g.
+       # norm, cmap, linewidths. See matplotlib documentation for the full list.
+       if len(args) != 3 && len(args) != 4:
+           raise TypeError(f"coloredline() takes 4 or 5 positional arguments, but {len(args)+1} were given")
+       coords = args[:-1]
+       c = args[-1]
+       segments = _as_segments(coords)
+       if len(coords) == 2: # 2d
+           lc = LineCollection(segments, **kwargs)
+       else: # 3d
+           lc = Line3DCollection(segments, **kwargs)
+
+       lc.set_array(c)
+       lc.autoscale()
+       line = ax.add_collection(lc)
+       return line
+   """
 end
 
 plot_sphere(ax, r, x_offset=0; kwargs...) = py"plot_sphere"(ax, r, xoffset, kwargs...)
+plot_colored_line(ax, args...; kwargs...) = py"coloredline"(ax, args...; kwargs...)
 
 function mapcoords(vs; from_crs=vec_coords, to_crs=map_projection)
    mc = to_crs.transform_points(from_crs,
