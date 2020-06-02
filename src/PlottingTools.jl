@@ -207,7 +207,7 @@ end
 "Returns H, xedges, yedges"
 function _espec_histogram(xs, ds; kw...)
     xs, ys, fs = _espec_basevalues(xs, ds)
-    np.histogram2d(xs, ustrip.(u"keV", ys), bins=25, weights=ustrip.(u"cm^-2 s^-2",fs); kw...)
+    np.histogram2d(xs, ustrip.(u"keV", ys), bins=25, weights=ustrip.(u"cm^-2*s^-1",fs); kw...)
 end
 
 function plot_espec_histogram(fig, ax, xs, ds; hist_kw=Dict(), pcolor_kw=Dict())
