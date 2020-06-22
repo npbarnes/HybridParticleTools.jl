@@ -231,6 +231,7 @@ end
 
 "Returns H, xedges, yedges"
 function _espec_histogram(xs, ds; kw...)
+    np = pyimport("numpy")
     xs, ys, fs = _espec_basevalues(xs, ds)
     np.histogram2d(xs, ustrip.(u"keV", ys), bins=25, weights=ustrip.(u"cm^-2*s^-1",fs); kw...)
 end
