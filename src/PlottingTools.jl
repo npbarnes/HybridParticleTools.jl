@@ -5,6 +5,7 @@ using PyCall
 using LinearAlgebra
 using Unitful
 using IterTools
+using StaticArrays
 using ..Utility
 using ..SphericalShapes
 
@@ -98,13 +99,25 @@ function plot_3d_dist(ax, d)
     plot_sphere(ax, 100, 400, alpha=0.6)
 end
 
-function plotshape(ax, sp; kwargs...)
+function plotshape(ax, sp::SphericalPolygon; kwargs...)
     es = collect(Iterators.flatten(edges(sp)))
     ax.plot(mapcoords(es, to_crs=geodetic)...; transform=geodetic, kwargs...)
 end
+function plotshape(ax, sc::SCircle; kwargs...)
+    points = circlepoints(sc.center, sc.angle)
+    ax.plot(mapcoords(points, to_crs=geodetic)...; transform=geodetic, kwargs...)
+end
 
-function circlepoints(a,N=100)
-    [(cos(a), sin(a)*sin(t), -sin(a)*cos(t)) for t in 2π/N*(0:N)]
+function circlepoints(c::AbstractVector,a::Number,N::Int=100)
+    # QQ is an othogonal matrix that rotates (1,0,0) to c
+    A = [c I]
+    Q,R = qr(A)
+    QQ = [c Q[:,2:end]]
+    # Get the circle points around (1,0,0) and then rotate them using QQ
+    return [QQ*v for v in circlepoints(a,N)]
+end
+function circlepoints(a::Number,N::Int=100)
+    [SA[cos(a), sin(a)*sin(t), -sin(a)*cos(t)] for t in 2π/N*(0:N)]
 end
 
 function circlegrid(ax, N=5)
