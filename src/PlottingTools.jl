@@ -4,6 +4,7 @@ export plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, p
 using PyCall
 using LinearAlgebra
 using Unitful
+using IterTools
 using ..Utility
 using ..SphericalShapes
 
