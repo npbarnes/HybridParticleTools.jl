@@ -155,10 +155,12 @@ SPolygon(r::Rotated) = SPolygon(inside(r), collect(vertices(r)))
 
 struct SCircle{T,U} <: SphericalShape
     center::SVector{3,T}
+    angle::U
     cosangle::U
     function SCircle(center,angle)
-        @assert a >= 0 && a <= π
-        new{eltype(c),typeof(a)}(c./norm(c),cos(a))
+        @assert angle >= 0 && angle <= π
+        normalized = center./norm(center)
+        new{eltype(normalized),typeof(angle)}(normalized,angle,cos(angle))
     end
 end
 area(c::SCircle) = 2π*(1-c.cosangle)
