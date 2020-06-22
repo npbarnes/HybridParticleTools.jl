@@ -8,6 +8,8 @@ using IterTools
 using StaticArrays
 using ..Utility
 using ..SphericalShapes
+using ..Sensors
+using ..Spacecraft
 
 const plt = PyNULL()
 const Axes3D = PyNULL()
