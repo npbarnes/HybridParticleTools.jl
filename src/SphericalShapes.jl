@@ -163,6 +163,7 @@ struct SCircle{T,U} <: SphericalShape
         new{eltype(normalized),typeof(angle)}(normalized,angle,cos(angle))
     end
 end
+inside(c::SCircle) = c.center
 area(c::SCircle) = 2π*(1-c.cosangle)
 function contains(c::SCircle, P)
     P = P ./ norm(P)
