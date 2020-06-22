@@ -1,5 +1,6 @@
 module PlottingTools
-export plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, plotdist, plotshape
+export  plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, plotdist, plotshape,
+        plot_colored_line, mapfigure, plot_dist, plot_pepssi, plot_sun, plot_pluto
 
 using PyCall
 using LinearAlgebra

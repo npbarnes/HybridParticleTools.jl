@@ -1,5 +1,5 @@
 module SphericalShapes
-export SphericalShape, SphericalPolygon, SPolygon, SCircle, Rotated, area, contains, vertices, edges, corners
+export SphericalShape, SphericalPolygon, SPolygon, SCircle, Rotated, area, contains, vertices, edges, corners, inside
 
 using PyCall
 using StaticArrays
