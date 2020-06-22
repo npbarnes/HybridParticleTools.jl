@@ -40,6 +40,7 @@ function __init__()
         return ax.plot_surface(x,y,z,**kwargs)
     """
 
+#=
     py"""
     import numpy as np
     import matplotlib.pyplot as plt
@@ -47,21 +48,44 @@ function __init__()
     from mpl_toolkits.mplot3d import Axes3D
     from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
-    def _as_segments(coords):
-        points = np.asanyarray(coords).T.reshape(-1,1,len(coords))
-        return np.concatenate([points[:-1], points[1:]], axis=1)
+    def _segment_indices(arr_len, seg_len):
+        assert arr_len > seg_len
+        Nsegments = (arr_len-seg_len)//(seg_len-1) + 1
+        return np.array([list(range(i*(seg_len-1), i*(seg_len-1)+seg_len)) for i in range(Nsegments)])
 
-    def coloredline(ax, *args, **kwargs):
-        # coloredline(ax, x, y, [z], c, **kwargs)
+    def _as_segments(coords, N):
+        ind = _segment_indices(len(coords[0]), N)
+        ret = np.empty([ind.shape[0], N, len(coords)])
+        for i,co in enumerate(coords):
+            ret[:,:,i] = co[ind]
+        return ret
+
+#    def _collect_offsets(points, N):
+#         L = len(points)
+#         return [points[i:L-(N-1)+i] for i in range(N)]
+
+#    def _as_segments(coords,N=2):
+#        points = np.asanyarray(coords).T.reshape(-1,1,len(coords))
+#        return np.concatenate(_collect_offsets(points,N), axis=1)[::N-1]
+
+    def coloredline(ax, *args, N=2, **kwargs):
+        # coloredline(ax, x, y, [z], c, [N=2], **kwargs)
         # plot a line in ax with points x,y,z
         # c is an array of scalars that are mapped to colors using the usual norm/cmap mechanism.
         # kwargs are any matplotlib.collections.Collection kwargs e.g.
         # norm, cmap, linewidths. See matplotlib documentation for the full list.
         if len(args) != 3 and len(args) != 4:
             raise TypeError(f"coloredline() takes 4 or 5 positional arguments, but {len(args)+1} were given")
+        for a in args[1:]:
+            if len(args[0]) != len(a):
+                raise ValueError("x, y, [z], and c must have the same lengths")
         coords = args[:-1]
+        segments = _as_segments(coords, N)
+
         c = args[-1]
-        segments = _as_segments(coords)
+        ind = _segment_indices(len(coords[0]), N)
+        c = np.mean(c[ind], axis=1)
+
         if len(coords) == 2: # 2d
             lc = LineCollection(segments, **kwargs)
         else: # 3d
@@ -80,6 +104,7 @@ function __init__()
         ax.autoscale_view()
         return line
     """
+=#
 end # __init__
 
 plot_sphere(ax, r, x_offset=0; kwargs...) = py"plot_sphere"(ax, r, xoffset, kwargs...)
