@@ -1,6 +1,6 @@
 module Utility
 export  listofvectors, listofmatrices, geomspace, asunitless, viewasarray,
-        @utc2et_str, @utc2datetime_str
+        @utc2et_str, @utc2datetime_str, getcolumns
 using StaticArrays
 using Unitful
 using PyCall
@@ -31,8 +31,8 @@ end
 
 "No-copy ustrip for Arrays of StaticArrays of Quantities"
 asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size, Q}} = reinterpret(similar_type(SA,Unitful.numtype(Q)), A)
-
 viewasarray(x::AbstractArray{SA,1}) where {S,T,SA<:StaticArray{S,T}} = reshape(reinterpret(T,x), (size(SA)...,:))
+getcolumns(x::AbstractArray{SA<:StaticArray,1}) = Tuple(getindex.(x, i) for i in 1:length(SA))
 
 macro utc2et_str(t)
     :(st.sp.str2et("2015-7-14T$($t)"))
