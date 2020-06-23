@@ -3,7 +3,6 @@ module Boris
 export boris, borisstep
 
 using LinearAlgebra
-using ..Distributions
 import PhysicalConstants.CODATA2018: m_p, e
 
 function vstep(v,dt,E,B)
