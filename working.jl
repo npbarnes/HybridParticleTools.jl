@@ -2,12 +2,16 @@ using HybridTools
 using Dates
 using PyCall
 using PyPlot
-using Plots
-plotlyjs()
+#using Plots
+#plotlyjs()
 using StaticArrays
 using Unitful
 using LinearAlgebra
+using NearestNeighbors
+using Random
+using Base.Threads
 using IterTools: firstrest
+using Distributions: Pareto
 import PhysicalConstants.CODATA2018: m_p, e
 
 using HybridTools.SphericalShapes
@@ -21,6 +25,7 @@ using HybridTools.PlutoUnits
 using HybridTools.Spacecraft
 
 const np = pyimport("numpy")
+const plt = pyimport("matplotlib.pyplot")
 const st = pyimport("spice_tools")
 const s = Simulation(pwd(), n=12)
 
@@ -58,6 +63,7 @@ function split(a)
     )
 end
 
+#=
 function plotlines(splitpairs)
     fig = plt.figure()
     ax = fig.add_subplot(111, projection="3d")
@@ -108,6 +114,8 @@ function todaysplot(b, c=["b"], N=100)
     plot!(p, split(ustrip.(location.(ets)))..., color="grey", linewidth=3)
     p
 end
+=#
+#=
 s0(ets) = filter.(fov_polygon.("NH_PEPSSI_S0", ets), ipuidist.(ets))
 expandby(a, n) = reduce(vcat, fill.(a,n))
 const ds = s0(ets)
@@ -117,5 +125,83 @@ const xs = expandby(location.(ets), length.(vvs))
 const b = boris.(xs, vs, dt, Ref(E), Ref(B), 10000, 4m_p);
 moving_average(vs,n) = [sum(@view vs[i:(i+n-1)])/n for i in 1:(length(vs)-(n-1))]
 smooth_bulk_v(ds) = moving_average(filter(!isnan, mean.(getproperty.(ds, :v))), 500)
+=#
+
+######################################################################################
+mutable struct BufferedGenerator{S,F,T,U}
+    v_sampler::S
+    fields::F
+    bufferdomain::Boris.Domain{T}
+    N::Int64
+    dt::U
+    function BufferedGenerator(v_sampler, f, d::Boris.Domain{T}, N, dt) where {T,U,V}
+        new{typeof(v_sampler), typeof(f), T, typeof(dt)}(v_sampler,f,d,N,dt)
+    end
+end
+const generator_lock = SpinLock()
+const RNGs = [MersenneTwister() for i in 1:nthreads()]
+function (bg::BufferedGenerator)(lst)
+    length_before = length(lst)
+    @threads for i in 1:bg.N
+        rng = RNGs[threadid()]
+        p = Boris.Particle(rand(rng, bg.bufferdomain), bg.v_sampler(rng), e/(4m_p))
+        p.x,p.v = Boris.step(p, bg.fields, bg.dt)
+        if p.x[1] < bg.bufferdomain.min_x
+            lock(generator_lock) do
+                push!(lst, p)
+            end
+        end
+    end
+    numberpushed = length(lst) - length_before
+    if numberpushed/bg.N > 0.1
+        bg.dt = bg.dt/2
+    elseif numberpushed/bg.N < 0.01
+        bg.dt = 2bg.dt
+    end
+end
+maxwell() = sqrt(1.5u"eV"/(4m_p)).*@SVector(randn(3)) + SA[-400.0,0.0,0.0]u"km/s"
+function sphere_sample(rng)
+    u = 2rand(rng) - 1
+    v = 2rand(rng) - 1
+    s = u^2 + v^2
+    while s >= 1
+       u = 2rand(rng) - 1
+       v = 2rand(rng) - 1
+       s = u^2 + v^2
+    end
+    z = sqrt(1-s)
+    SA[2u*z, 2v*z, 1-2s]
+end
+function superthermal(rng)
+    mag = rand(rng,Pareto(4, 400))u"km/s"
+    mag*sphere_sample(rng) + SA[-400.0, 0.0, 0.0]u"km/s"
+end
+
+const f = Boris.Fields(E,B)
+const dom = Boris.Domain(extrema.(parent(E).knots))
+const buf_dom = Boris.Domain(dom.max_x, dom.min_y, dom.min_z, dom.max_x+2s.dx*u"km", dom.max_y, dom.max_z)
+const superthermal_pg! = BufferedGenerator(superthermal, f, buf_dom, 9000000, dt)
+finaltime = 10000*dt
+step = 10dt
+N = finaltime/step
+const ps = trace_particles(superthermal_pg!, f, dom, step, N, saveat=N);
+const kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev())
+const ts = inrange.(Ref(kd), ustrip.(u"km",location.(ets)), s.dx)
+Distribution(ps::Vector{<:Boris.Particle}) = Distribution(getproperty.(ps,:v),
+                                                        fill(4m_p, length(ps)),
+                                                        fill(e, length(ps)),
+                                                        fill(1u"km^-3", length(ps)),
+                                                        fill(He_ipui, length(ps)))
+
+function getparticlehistory(res,i)
+    getindex.(res[length.(res) .>= i], i)
+end
+
+function plot_particlehistory(ax,h)
+    xs = asunitless(u"Rp", getproperty.(h,:x))
+    ax.plot(split(xs)...)
+end
+
+
 
 nothing
