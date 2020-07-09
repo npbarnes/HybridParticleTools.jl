@@ -30,6 +30,13 @@ function geomspace(start, stop, N)
 end
 
 "No-copy ustrip for Arrays of StaticArrays of Quantities"
+function asunitless(u::Unitful.Units, A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size,Q}}
+    ret = similar(A, similar_type(SA, Unitful.numtype(Q)))
+    for (i,a) in enumerate(A)
+        ret[i] = ustrip.(u, a)
+    end
+    return ret
+end
 asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size, Q}} = reinterpret(similar_type(SA,Unitful.numtype(Q)), A)
 viewasarray(x::AbstractArray{SA,1}) where {S,T,SA<:StaticArray{S,T}} = reshape(reinterpret(T,x), (size(SA)...,:))
 getcolumns(x::AbstractArray{SA<:StaticArray,1}) = Tuple(getindex.(x, i) for i in 1:length(SA))
@@ -40,5 +47,6 @@ end
 macro utc2datetime_str(t)
     :(st.et2pydatetime(@pluto_et_str $t))
 end
+
 
 end # module
