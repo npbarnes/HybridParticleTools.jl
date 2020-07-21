@@ -32,6 +32,11 @@ function Base.convert(::Type{Particle{A,B,C}}, p::Particle{AA,BB,CC}) where {A,B
     end
     Particle{A,B,C}(p.x, p.v, p.qm, p.active)
 end
+function Base.copy(p::Particle)
+    ret = Particle(p.x, p.v, p.qm)
+    ret.active = p.active
+    return ret
+end
 
 struct Fields{T, U}
     E::T
@@ -125,24 +130,32 @@ function advance!(particles, fields, domain, dt)
     end
 end
 
-function trace_particles(add_particles!, fields, domain, dt, N; saveat=N)
-    T = Particle{typeof(u"Rp"),typeof(u"km/s"),typeof(u"C/kg")}
-    particles = Vector{T}(undef, 0)
-    if length(saveat) != 1
-        saved = Vector{Vector{T}}(undef, 0)
+function trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=N)
+    return_as_list = length(saveat) != 1
+    if return_as_list
+        saved = Vector{Vector{eltype(particles)}}(undef, 0)
     end
     @showprogress for i in 1:N
         add_particles!(particles)
         advance!(particles, fields, domain, dt)
         if i ∈ saveat
-            if length(saveat) != 1
-                push!(saved, deepcopy(particles))
+            if return_as_list
+                push!(saved, copy.(particles))
             else
                 return particles
             end
         end
     end
     return saved
+end
+function trace_particles(particles, add_particles!, fields, domain, dt, N; saveat=N)
+    particles = copy.(particles)
+    trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=saveat)
+end
+function trace_particles(add_particles!, fields, domain, dt, N; saveat=N)
+    T = Particle{typeof(u"Rp"),typeof(u"km/s"),typeof(u"C/kg")}
+    particles = Vector{T}(undef, 0)
+    trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=saveat)
 end
 
 end # module
