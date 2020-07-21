@@ -271,7 +271,8 @@ end
 
 function plot_espec_scatter(fig, ax, xs, ds)
     xs, ys, fs = _espec_basevalues(xs, ds)
-    ax.scatter(xs, ys, s=20fs/maximum(fs))
+    st = pyimport("spice_tools")
+    ax.scatter(st.et2pydatetime.(xs), ustrip.(u"keV",ys), s=20fs./maximum(fs))
 end
 
 end # module
