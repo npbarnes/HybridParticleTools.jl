@@ -128,6 +128,7 @@ smooth_bulk_v(ds) = moving_average(filter(!isnan, mean.(getproperty.(ds, :v))), 
 =#
 
 ######################################################################################
+#=
 mutable struct BufferedGenerator{S,F,T,U}
     v_sampler::S
     fields::F
@@ -159,6 +160,28 @@ function (bg::BufferedGenerator)(lst)
         bg.dt = 2bg.dt
     end
 end
+=#
+struct UnBufferedGenerator{S,U,T}
+    v_sampler::S
+    x::U
+    y_extent::Tuple{U,U}
+    z_extent::Tuple{U,U}
+    N::Int64
+    dt::T
+    function UnBufferedGenerator(v_sampler, x, ys, zs, N, dt)
+        new{typeof(v_sampler), typeof(x), typeof(dt)}(v_sampler,x,ys,zs,N,dt)
+    end
+end
+function (g::UnBufferedGenerator)(lst)
+    ymin,ymax = g.y_extent
+    zmin,zmax = g.z_extent
+    for i in 1:g.N
+        v = g.v_sampler()
+        x = SA[g.x + rand()*v[1]*g.dt, (ymax-ymin)*rand()+ymin, (zmax-zmin)*rand()+zmin]
+        push!(lst, Boris.Particle(x, v, e/(4m_p)))
+    end
+end
+
 maxwell() = sqrt(1.5u"eV"/(4m_p)).*@SVector(randn(3)) + SA[-400.0,0.0,0.0]u"km/s"
 function sphere_sample(rng)
     u = 2rand(rng) - 1
@@ -182,20 +205,37 @@ function shell(rng=Random.GLOBAL_RNG)
 end
 
 const f = Boris.Fields(E,B)
+#xlim,ylim,zlim = extrema.(parent(E).knots)
+#const dom = Boris.Domain((xlim,ylim,zlim./3))
 const dom = Boris.Domain(extrema.(parent(E).knots))
-const buf_dom = Boris.Domain(dom.max_x, dom.min_y, dom.min_z, dom.max_x+2s.dx*u"km", dom.max_y, dom.max_z)
-const superthermal_pg! = BufferedGenerator(superthermal, f, buf_dom, 9000000, dt)
-finaltime = 10000*dt
+finaltime = 50000*dt
 step = 10dt
 N = finaltime/step
-const ps = trace_particles(superthermal_pg!, f, dom, step, N, saveat=N);
-const kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev())
-const ts = inrange.(Ref(kd), ustrip.(u"km",location.(ets)), s.dx)
-Distribution(ps::Vector{<:Boris.Particle}) = Distribution(getproperty.(ps,:v),
-                                                        fill(4m_p, length(ps)),
-                                                        fill(e, length(ps)),
-                                                        fill(1u"km^-3", length(ps)),
-                                                        fill(He_ipui, length(ps)))
+#buf_dom = Boris.Domain(dom.max_x, dom.min_y, dom.min_z, dom.max_x+(800u"km/s" * step), dom.max_y, dom.max_z)
+#const superthermal_pg! = BufferedGenerator(superthermal, f, buf_dom, 1000000, step)
+const shell_pg! = UnBufferedGenerator(shell, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 50000, step)
+const superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 200000, step)
+ps = trace_particles(superthermal_pg!, f, dom, step, N);
+total_num_particles = length(ps);
+filter!(p->p.active, ps);
+println("Active/Total = $(length(ps)/total_num_particles)");
+
+const kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
+const ts = inrange.(Ref(kd), [ustrip.(u"km", location(et)) for et in ets], s.dx);
+function Distribution(ps::Vector{<:Boris.Particle})
+    Distribution(
+        getproperty.(ps,:v),
+        fill(4m_p, length(ps)),
+        fill(e, length(ps)),
+        fill(1u"km^-3", length(ps)),
+        fill(He_ipui, length(ps))
+    )
+end
+flyby_ets = utc2et"11:00":30:utc2et"13:00";
+flyby_ts = inrange.(Ref(kd), [ustrip.(u"km", location(et)) for et in flyby_ets], s.dx);
+ds = Distribution.([ps[t] for t in flyby_ts]);
+#fig, ax = especfigure();
+#PlottingTools.plot_espec_scatter(fig, ax, flyby_ets, filter.(pepssifov, ds));
 
 function getparticlehistory(res,i)
     getindex.(res[length.(res) .>= i], i)
