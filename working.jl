@@ -172,8 +172,12 @@ function sphere_sample(rng)
     z = sqrt(1-s)
     SA[2u*z, 2v*z, 1-2s]
 end
-function superthermal(rng)
+function superthermal(rng=Random.GLOBAL_RNG)
     mag = rand(rng,Pareto(4, 400))u"km/s"
+    mag*sphere_sample(rng) + SA[-400.0, 0.0, 0.0]u"km/s"
+end
+function shell(rng=Random.GLOBAL_RNG)
+    mag = 400.0u"km/s"
     mag*sphere_sample(rng) + SA[-400.0, 0.0, 0.0]u"km/s"
 end
 
