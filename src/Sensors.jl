@@ -3,6 +3,8 @@ export density, bulkvelocity, pressuretensor, pressure, thermalenergy, flux,
        energy, energies, energypercharge, fluxes
 
 using LinearAlgebra
+using Unitful
+using ..SphericalShapes
 using ..Distributions
 
 # Get moments from a distribution
@@ -27,9 +29,22 @@ energy(e::DistElement) = (1/2 * e.m * norm(e.v)^2)
 energies(d::Distribution) = energy.(d)
 energypercharge(e::DistElement) = energy(e) / e.q
 
-function differential_intensity(d, fov, Emin, Emax)
+function _differential_intensity(d::Distribution, Elo, Ehi, Ω)
+    ΔE = Ehi - Elo
+    dd = filter(e->Elo<=energy(e)<=Ehi, d)
+    flux(dd)/(Ω*ΔE)
+end
+function differential_intensity(fov::SphericalShape, bin_edges, d::Distribution)
+    Ω = area(fov)u"sr"
     dd = filter(fov, d)
-    dd = filter(e->Emin <= energy(e) <= Emax, dd)
-    return flux(dd)/(area(fov)*(Emax-Emin))
+
+    first = _differential_intensity(dd, bin_edges[1], bin_edges[2], Ω)
+
+    ret = Vector{typeof(first)}(undef, length(bin_edges)-1)
+    ret[1] = first
+    for (i,(Elo,Ehi)) in enumerate(zip(@view(bin_edges[2:end]), @view(bin_edges[3:end])))
+        @inbounds ret[i+1] = _differential_intensity(dd, Elo, Ehi, Ω)
+    end
+    return ret
 end
 end # module
