@@ -2,6 +2,7 @@ module Utility
 export  listofvectors, listofmatrices, geomspace, asunitless, viewasarray,
         @utc2et_str, @utc2datetime_str, getcolumns
 using StaticArrays
+using StructArrays
 using Unitful
 using PyCall
 
@@ -46,6 +47,13 @@ macro utc2et_str(t)
 end
 macro utc2datetime_str(t)
     :(st.et2pydatetime(@pluto_et_str $t))
+end
+
+# This specific method is needed for filter! to work on StructArrays
+function deleteat!(sa::StructArray, r::UnitRange{<:Integer})
+    for field in fieldarrays(sa)
+        deleteat!(field, r)
+    end
 end
 
 
