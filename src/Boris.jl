@@ -111,7 +111,7 @@ function bounds_handler!(p, domain)
         if p.x[3] > domain.max_z
             p.x = SA[p.x[1],p.x[2], p.x[3]-(domain.max_z-domain.min_z)]
         elseif p.x[3] < domain.min_z
-            p.x = SA[p.x[1],p.x[2],p.x[3]+(domain.max_y-domain.min_y)]
+            p.x = SA[p.x[1],p.x[2],p.x[3]+(domain.max_z-domain.min_z)]
         end
     end
 end
