@@ -34,7 +34,7 @@ const swapfov = fov_polygon("NH_SWAP", st.nh_in_wake)
 
 const et_start = utc2et"11:30"
 const et_end   =  utc2et"14:01"
-const ets = collect(et_start:(10*60):et_end)
+ets = collect(et_start:(10*60):et_end)
 
 ipuidist(d::Distribution) = filter(x->x.t==He_ipui, d)
 ipuidist(pos::AbstractVector) = ipuidist(Distribution(s,pos))
