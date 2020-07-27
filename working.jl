@@ -181,27 +181,32 @@ function (g::UnBufferedGenerator)(lst)
         push!(lst, Boris.Particle(x, v, e/(4m_p)))
     end
 end
+function macroparticle_weight(ubg::UnBufferedGenerator, trueflux)
+    A = (ubg.y_extent[2] - ubg.y_extent[1])*(ubg.z_extent[2] - ubg.z_extent[1])
+    macroflux = ubg.N/(A*ubg.dt)
+    return trueflux/macroflux
+end
 
 maxwell() = sqrt(1.5u"eV"/(4m_p)).*@SVector(randn(3)) + SA[-400.0,0.0,0.0]u"km/s"
-function sphere_sample(rng)
-    u = 2rand(rng) - 1
-    v = 2rand(rng) - 1
+function sphere_sample()
+    u = 2rand() - 1
+    v = 2rand() - 1
     s = u^2 + v^2
     while s >= 1
-       u = 2rand(rng) - 1
-       v = 2rand(rng) - 1
+       u = 2rand() - 1
+       v = 2rand() - 1
        s = u^2 + v^2
     end
     z = sqrt(1-s)
     SA[2u*z, 2v*z, 1-2s]
 end
-function superthermal(rng=Random.GLOBAL_RNG)
-    mag = rand(rng,Pareto(4, 400))u"km/s"
-    mag*sphere_sample(rng) + SA[-400.0, 0.0, 0.0]u"km/s"
+function superthermal()
+    mag = rand(Pareto(4, 400))u"km/s"
+    mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
 end
-function shell(rng=Random.GLOBAL_RNG)
+function shell()
     mag = 400.0u"km/s"
-    mag*sphere_sample(rng) + SA[-400.0, 0.0, 0.0]u"km/s"
+    mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
 end
 
 const f = Boris.Fields(E,B)
@@ -210,18 +215,17 @@ const f = Boris.Fields(E,B)
 const dom = Boris.Domain(extrema.(parent(E).knots))
 finaltime = 50000*dt
 step = 10dt
-N = finaltime/step
+N = ceil(Int, finaltime/step)
 #buf_dom = Boris.Domain(dom.max_x, dom.min_y, dom.min_z, dom.max_x+(800u"km/s" * step), dom.max_y, dom.max_z)
 #const superthermal_pg! = BufferedGenerator(superthermal, f, buf_dom, 1000000, step)
-const shell_pg! = UnBufferedGenerator(shell, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 50000, step)
-const superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 200000, step)
-ps = trace_particles(superthermal_pg!, f, dom, step, N);
-total_num_particles = length(ps);
-filter!(p->p.active, ps);
-println("Active/Total = $(length(ps)/total_num_particles)");
+shell_pg! = UnBufferedGenerator(shell, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 50000, step)
+superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 10000, step)
 
-const kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
-const ts = inrange.(Ref(kd), [ustrip.(u"km", location(et)) for et in ets], s.dx);
+#=
+ps = trace_particles(superthermal_pg!, f, dom, step, N)
+
+kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
+ts = inrange.(Ref(kd), [ustrip.(u"km", location(et)) for et in ets], s.dx);
 function Distribution(ps::Vector{<:Boris.Particle})
     Distribution(
         getproperty.(ps,:v),
@@ -246,6 +250,6 @@ function plot_particlehistory(ax,h)
     ax.plot(split(xs)...)
 end
 
-
+=#
 
 nothing
