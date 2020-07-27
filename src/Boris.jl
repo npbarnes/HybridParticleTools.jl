@@ -126,32 +126,31 @@ function advance!(particles, fields, domain, dt)
     deleteat!(particles, to_delete)
 end
 
-function trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=N)
-    return_as_list = length(saveat) != 1
-    if return_as_list
-        saved = Vector{Vector{eltype(particles)}}(undef, 0)
-    end
-    @showprogress for i in 1:N
+function trace_particles!(particles, add_particles!, fields, domain, dt, N; progress_bar=ProgressUnknown("Steps taken:"))
+    for i in 1:N
         add_particles!(particles)
         advance!(particles, fields, domain, dt)
-        if i ∈ saveat
-            if return_as_list
-                push!(saved, copy.(particles))
-            else
-                return particles
-            end
-        end
+        next!(progress_bar)
     end
-    return saved
+    return particles
 end
-function trace_particles(particles, add_particles!, fields, domain, dt, N; saveat=N)
-    particles = copy.(particles)
-    trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=saveat)
-end
-function trace_particles(add_particles!, fields, domain, dt, N; saveat=N)
+
+function empty_particle_list(sizehint=nothing)
     T = Particle{typeof(u"Rp"),typeof(u"km/s"),typeof(u"C/kg")}
-    particles = Vector{T}(undef, 0)
-    trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=saveat)
+    ret = T[]
+    if sizehint !== nothing
+        sizehint!(ret, sizehint)
+    end
+    return ret
+end
+function trace_particles(add_particles!, fields, domain, dt, N; progress_bar=Progress(N*nthreads()))
+    list_of_ps = [empty_particle_list() for i in 1:nthreads()]
+    @threads for thread in 1:nthreads()
+        trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N; progress_bar=progress_bar)
+    end
+    ps = reduce(vcat, list_of_ps)
+    finish!(progress_bar)
+    return ps
 end
 
 end # module
