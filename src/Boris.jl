@@ -17,8 +17,7 @@ mutable struct Particle{X,V,QM}
     x::SVector{3,Quantity{Float64,𝐋,X}}
     v::SVector{3,Quantity{Float64,𝐋/𝐓,V}}
     qm::Quantity{Float64,𝐈*𝐓/𝐌, QM}
-    active::Bool
-    Particle{X,V,QM}(x,v,qm, active=true) where {X,V,QM} = new{X,V,QM}(x,v,qm,active)
+    Particle{X,V,QM}(x,v,qm) where {X,V,QM} = new{X,V,QM}(x,v,qm)
 end
 function Particle(x, v, qm)
     UX = typeof(unit(eltype(x)))
@@ -30,12 +29,10 @@ function Base.convert(::Type{Particle{A,B,C}}, p::Particle{AA,BB,CC}) where {A,B
     if (A,B,C) == (AA,BB,CC)
         return p
     end
-    Particle{A,B,C}(p.x, p.v, p.qm, p.active)
+    Particle{A,B,C}(p.x, p.v, p.qm)
 end
 function Base.copy(p::Particle)
-    ret = Particle(p.x, p.v, p.qm)
-    ret.active = p.active
-    return ret
+    Particle(p.x, p.v, p.qm)
 end
 
 struct Fields{T, U}
@@ -104,30 +101,29 @@ function boris(xinit, vinit, dt, E, B, N, m=m_p, q=e)
 end
 
 function bounds_handler!(p, domain)
-    if p.x[1] < domain.min_x # deactivate particles after they go too far downstream
-        p.active = false
-    else # apply periodic boundaries in y and z
-        if p.x[2] > domain.max_y
-            p.x = SA[p.x[1],p.x[2]-(domain.max_y-domain.min_y), p.x[3]]
-        elseif p.x[2] < domain.min_y
-            p.x = SA[p.x[1],p.x[2]+(domain.max_y-domain.min_y), p.x[3]]
-        end
+    if p.x[2] > domain.max_y
+        p.x = SA[p.x[1],p.x[2]-(domain.max_y-domain.min_y), p.x[3]]
+    elseif p.x[2] < domain.min_y
+        p.x = SA[p.x[1],p.x[2]+(domain.max_y-domain.min_y), p.x[3]]
+    end
 
-        if p.x[3] > domain.max_z
-            p.x = SA[p.x[1],p.x[2], p.x[3]-(domain.max_z-domain.min_z)]
-        elseif p.x[3] < domain.min_z
-            p.x = SA[p.x[1],p.x[2],p.x[3]+(domain.max_z-domain.min_z)]
-        end
+    if p.x[3] > domain.max_z
+        p.x = SA[p.x[1],p.x[2], p.x[3]-(domain.max_z-domain.min_z)]
+    elseif p.x[3] < domain.min_z
+        p.x = SA[p.x[1],p.x[2],p.x[3]+(domain.max_z-domain.min_z)]
     end
 end
 
 function advance!(particles, fields, domain, dt)
-    @threads for p in particles
+    to_delete = []
+    for (i,p) in enumerate(particles)
         bounds_handler!(p, domain)
-        if p.active
-            p.x, p.v = step(p, fields, dt)
+        p.x, p.v = step(p, fields, dt)
+        if p.x[1] < domain.min_x # delete particles after they go too far downstream
+            push!(to_delete, i)
         end
     end
+    deleteat!(particles, to_delete)
 end
 
 function trace_particles!(particles, add_particles!, fields, domain, dt, N; saveat=N)
