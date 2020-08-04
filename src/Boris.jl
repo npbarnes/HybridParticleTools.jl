@@ -115,7 +115,7 @@ function bounds_handler!(p, domain)
 end
 
 function advance!(particles, fields, domain, dt)
-    to_delete = []
+    to_delete = Int[]
     for (i,p) in enumerate(particles)
         bounds_handler!(p, domain)
         p.x, p.v = step(p, fields, dt)
