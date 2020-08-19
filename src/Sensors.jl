@@ -1,6 +1,6 @@
 module Sensors
 export density, bulkvelocity, pressuretensor, pressure, thermalenergy, flux,
-       energy, energies, energypercharge, fluxes
+       energy, energies, energypercharge, fluxes, differential_intensity
 
 using LinearAlgebra
 using Unitful
