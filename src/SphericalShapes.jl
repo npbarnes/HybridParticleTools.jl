@@ -30,14 +30,14 @@ Base.broadcastable(ss::SphericalShape) = Ref(ss)
 
 struct FullSphere{T<:Number} <: SphericalShape end
 FullSphere() = FullSphere{Float64}()
-area(::FullSphere) = 4T(π)
+area(::FullSphere{T}) where T = 4T(π)
 contains(::FullSphere, P) = true
 
 
 struct NoSphere{T<:Number} <: SphericalShape end
 NoSphere() = NoSphere{Float64}()
-area(::NoSphere) = zero(T)
-contains(::NoSphere) = false
+area(::NoSphere{T}) where T = zero(T)
+contains(::NoSphere, P) = false
 
 "Abstract Spherical Polygons have edges that are great circles"
 abstract type SphericalPolygon <: SphericalShape end
