@@ -2,8 +2,6 @@ using HybridTools
 using Dates
 using PyCall
 using PyPlot
-#using Plots
-#plotlyjs()
 using StaticArrays
 using Unitful
 using LinearAlgebra
@@ -51,9 +49,7 @@ notipuidist(et::Number) = notipuidist(location(et))
 const prefix = joinpath(pwd(),"data")
 const para = ParameterSet(prefix)
 const dt = Float64(para.dt)*u"s"
-#const xinit = SA[8.0, 0.0, 0.0]u"Rp"
 const E,B = loadfields(prefix, 27)
-#const S0_ds = filter.(fov_polygon.("NH_PEPSSI_S0", ets), ipuidist.(ets))
 
 function split(a)
     return (
@@ -63,104 +59,6 @@ function split(a)
     )
 end
 
-#=
-function plotlines(splitpairs)
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    n = 100
-    for ((x,y,z),(vx,vy,vz)) in splitpairs
-        ax.plot(ustrip(x[1:n:end]), ustrip(y[1:n:end]), ustrip(z[1:n:end]))
-    end
-    ax.scatter([0],[0],[0], s=100)
-    ax.set_xlim((-50,20))
-    ax.set_ylim((-35,35))
-    ax.set_zlim((-35,35))
-end
-function plotenergies(splitpairs)
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    n = 100
-    for ((x,y,z),(vx,vy,vz)) in splitpairs
-        xx = ustrip(x[1:n:end])
-        yy = ustrip(y[1:n:end])
-        zz = ustrip(z[1:n:end])
-        vxx = ustrip(vx[1:n:end])
-        vyy = ustrip(vy[1:n:end])
-        vzz = ustrip(vz[1:n:end])
-        ax.scatter(xx, yy, zz, c=ustrip.(vxx.^2 .+ vyy.^2 .+ vzz.^2), s=10)
-    end
-    ax.scatter([0],[0],[0], s=100)
-    ax.set_xlim((-50,20))
-    ax.set_ylim((-35,35))
-    ax.set_zlim((-35,35))
-end
-
-function todaysplot(b, c=["b"], N=100)
-    #fig, ax = plt.subplots(subplot_kw=Dict("projection"=>"3d"))
-    i = 0
-    xx = b[1][1]
-    curx = xx[1]
-    x,y,z = split(ustrip.(xx[1:N:end]))
-    p = plot(x,y,z, color=c[i%length(c)+1])
-    for (xx,vv) in b
-        if xx[1] != curx
-            curx = xx[1]
-            i += 1
-        end
-        x,y,z = split(ustrip.(xx[1:N:end]))
-        plot!(p, x,y,z, color=c[i%length(c)+1], legend=false)
-    end
-    scatter!(p, [0],[0],[0], markersize=1, color="beige")
-    plot!(p, split(ustrip.(location.(ets)))..., color="grey", linewidth=3)
-    p
-end
-=#
-#=
-s0(ets) = filter.(fov_polygon.("NH_PEPSSI_S0", ets), ipuidist.(ets))
-expandby(a, n) = reduce(vcat, fill.(a,n))
-const ds = s0(ets)
-const vvs = getproperty.(ds,:v)
-const vs = reduce(vcat, vvs)
-const xs = expandby(location.(ets), length.(vvs))
-const b = boris.(xs, vs, dt, Ref(E), Ref(B), 10000, 4m_p);
-moving_average(vs,n) = [sum(@view vs[i:(i+n-1)])/n for i in 1:(length(vs)-(n-1))]
-smooth_bulk_v(ds) = moving_average(filter(!isnan, mean.(getproperty.(ds, :v))), 500)
-=#
-
-######################################################################################
-#=
-mutable struct BufferedGenerator{S,F,T,U}
-    v_sampler::S
-    fields::F
-    bufferdomain::Boris.Domain{T}
-    N::Int64
-    dt::U
-    function BufferedGenerator(v_sampler, f, d::Boris.Domain{T}, N, dt) where {T,U,V}
-        new{typeof(v_sampler), typeof(f), T, typeof(dt)}(v_sampler,f,d,N,dt)
-    end
-end
-const generator_lock = SpinLock()
-const RNGs = [MersenneTwister() for i in 1:nthreads()]
-function (bg::BufferedGenerator)(lst)
-    length_before = length(lst)
-    @threads for i in 1:bg.N
-        rng = RNGs[threadid()]
-        p = Boris.Particle(rand(rng, bg.bufferdomain), bg.v_sampler(rng), e/(4m_p))
-        p.x,p.v = Boris.step(p, bg.fields, bg.dt)
-        if p.x[1] < bg.bufferdomain.min_x
-            lock(generator_lock) do
-                push!(lst, p)
-            end
-        end
-    end
-    numberpushed = length(lst) - length_before
-    if numberpushed/bg.N > 0.1
-        bg.dt = bg.dt/2
-    elseif numberpushed/bg.N < 0.01
-        bg.dt = 2bg.dt
-    end
-end
-=#
 struct UnBufferedGenerator{S,U,T}
     v_sampler::S
     x::U
@@ -181,10 +79,10 @@ function (g::UnBufferedGenerator)(lst)
         push!(lst, Boris.Particle(x, v, e/(4m_p)))
     end
 end
-function macroparticle_weight(ubg::UnBufferedGenerator, trueflux)
+function macroparticle_N(ubg::UnBufferedGenerator, trueflux)
     A = (ubg.y_extent[2] - ubg.y_extent[1])*(ubg.z_extent[2] - ubg.z_extent[1])
     macroflux = ubg.N/(A*ubg.dt)
-    return trueflux/macroflux
+    uconvert(Unitful.NoUnits, trueflux/macroflux)
 end
 
 maxwell() = sqrt(1.5u"eV"/(4m_p)).*@SVector(randn(3)) + SA[-400.0,0.0,0.0]u"km/s"
@@ -210,46 +108,35 @@ function shell()
 end
 
 const f = Boris.Fields(E,B)
-#xlim,ylim,zlim = extrema.(parent(E).knots)
-#const dom = Boris.Domain((xlim,ylim,zlim./3))
 const dom = Boris.Domain(extrema.(parent(E).knots))
 finaltime = 50000*dt
 step = 10dt
 N = ceil(Int, finaltime/step)
-#buf_dom = Boris.Domain(dom.max_x, dom.min_y, dom.min_z, dom.max_x+(800u"km/s" * step), dom.max_y, dom.max_z)
-#const superthermal_pg! = BufferedGenerator(superthermal, f, buf_dom, 1000000, step)
 shell_pg! = UnBufferedGenerator(shell, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 50000, step)
-superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 10000, step)
+superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 13000, step)
 
-#=
 ps = trace_particles(superthermal_pg!, f, dom, step, N)
-
 kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
-ts = inrange.(Ref(kd), [ustrip.(u"km", location(et)) for et in ets], s.dx);
-function Distribution(ps::Vector{<:Boris.Particle})
-    Distribution(
-        getproperty.(ps,:v),
-        fill(4m_p, length(ps)),
-        fill(e, length(ps)),
-        fill(1u"km^-3", length(ps)),
-        fill(He_ipui, length(ps))
-    )
+
+function _traced_distribution(ps, kd, x, dx, N)
+    indexs = inrange(kd, ustrip.(u"km",x), ustrip(u"km",dx))
+    l = length(indexs)
+    n = Vector{typeof(1.0u"km^-3")}(undef, l)
+    for (i,index) in enumerate(indexs)
+        n[i] = N*HybridTools.Distributions.weight(x, ps[index].x, dx)
+    end
+    Distribution{eltype(ps[1].v), typeof(4m_p), typeof(1e), typeof(1.0u"km^-3")}((
+        getproperty.(@view(ps[indexs]),:v),
+        fill(4m_p, l),
+        fill(1e, l),
+        n,
+        fill(He_ipui, l)
+    ))
 end
+
 flyby_ets = utc2et"11:00":30:utc2et"13:00";
-flyby_ts = inrange.(Ref(kd), [ustrip.(u"km", location(et)) for et in flyby_ets], s.dx);
-ds = Distribution.([ps[t] for t in flyby_ts]);
-#fig, ax = especfigure();
-#PlottingTools.plot_espec_scatter(fig, ax, flyby_ets, filter.(pepssifov, ds));
-
-function getparticlehistory(res,i)
-    getindex.(res[length.(res) .>= i], i)
-end
-
-function plot_particlehistory(ax,h)
-    xs = asunitless(u"Rp", getproperty.(h,:x))
-    ax.plot(split(xs)...)
-end
-
-=#
+ds = _traced_distribution.(Ref(ps), Ref(kd), location.(flyby_ets), s.dx*u"km", macroparticle_N(superthermal_pg!, 400u"km/s"*4.7e10u"km^-3"))
+fig, ax = especfigure();
+PlottingTools.plot_espec_scatter(fig, ax, flyby_ets, filter.(pepssifov, ds));
 
 nothing
