@@ -1,6 +1,6 @@
 module Spacecraft
 
-export Trajectory, location, fov_polygon
+export Trajectory, location, fov_polygon, r_location, r_fov_polygon
 
 using PyCall
 using StaticArrays
@@ -45,7 +45,9 @@ end
 function fov_polygon(inst, et, frame="HYBRID_SIMULATION_INTERNAL")
     SPolygon(st.fov_polygon(inst, et, frame))
 end
+r_fov_polygon(args...) = r_transform(fov_polygon(args...))
 
 location(et) = uconvert.(u"Rp", st.coordinate_at_time(et)u"km")
+r_location(et) = r_transform(location(et))
 
 end # module
