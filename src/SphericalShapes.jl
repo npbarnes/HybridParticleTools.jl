@@ -1,5 +1,6 @@
 module SphericalShapes
-export SphericalShape, SphericalPolygon, SPolygon, SCircle, Rotated, area, contains, vertices, edges, corners, inside
+export  SphericalShape, SphericalPolygon, SPolygon, SCircle, Rotated, area, contains, vertices, edges, corners, inside,
+        r_transform
 
 using PyCall
 using StaticArrays
@@ -102,6 +103,8 @@ end
 SPolygon(o::PyObject) = SPolygon(o.inside, listofvectors(o.vertices))
 inside(sp::SPolygon) = sp.inside
 vertices(sp::SPolygon) = sp.vertices
+
+r_transform(s::SPolygon) = SPolygon(r_transform(s.inside), r_transform.(s.vertices))
 
 """
 Compute angle between the spherical arc AB and the spherical arc BC.
