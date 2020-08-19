@@ -2,6 +2,7 @@ module Sensors
 export density, bulkvelocity, pressuretensor, pressure, thermalenergy, flux,
        energy, energies, energypercharge, fluxes, differential_intensity
 
+using StaticArrays
 using LinearAlgebra
 using Unitful
 using ..SphericalShapes
@@ -9,7 +10,7 @@ using ..Distributions
 
 # Get moments from a distribution
 density(f::Distribution) = sum(f.n)
-bulkvelocity(f::Distribution) = sum(f.v .* f.n)/density(f)
+bulkvelocity(f::Distribution) = isempty(f) ? SA[0.0,0.0,0.0]u"km/s" : sum(f.v .* f.n)/density(f)
 function pressuretensor(f::Distribution)
     uf = bulkvelocity(f)
     sum(zip(f.v, f.n, f.m)) do (v,n,m)
