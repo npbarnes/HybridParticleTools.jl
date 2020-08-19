@@ -1,6 +1,6 @@
 module Utility
 export  listofvectors, listofmatrices, geomspace, asunitless, viewasarray,
-        @utc2et_str, @utc2datetime_str, getcolumns
+        @utc2et_str, @utc2datetime_str, getcolumns, r_transform
 using StaticArrays
 using StructArrays
 using Unitful
@@ -38,7 +38,10 @@ function asunitless(u::Unitful.Units, A::AbstractArray{SA}) where {Size, Q<:Quan
     end
     return ret
 end
+
 asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size, Q}} = reinterpret(similar_type(SA,Unitful.numtype(Q)), A)
+
+
 viewasarray(x::AbstractArray{SA,1}) where {S,T,SA<:StaticArray{S,T}} = reshape(reinterpret(T,x), (size(SA)...,:))
 getcolumns(x::AbstractArray{SA<:StaticArray,1}) = Tuple(getindex.(x, i) for i in 1:length(SA))
 
@@ -55,6 +58,16 @@ function deleteat!(sa::StructArray, r::UnitRange{<:Integer})
         deleteat!(field, r)
     end
 end
+
+# The IMF reversal vector transform
+function r_transform(v::AbstractVector)
+    r = similar(v)
+    r[1] = v[1]
+    r[2] = -v[2]
+    r[3] = -v[3]
+    return r
+end
+r_transform(v::StaticArray) = SA[v[1],-v[2],-v[3]]
 
 
 end # module
