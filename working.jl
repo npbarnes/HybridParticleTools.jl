@@ -22,10 +22,11 @@ using HybridTools.ParameterSets
 using HybridTools.PlutoUnits
 using HybridTools.Spacecraft
 
+folder = "/media/nathan/DATAPART11/2020-Thu-Jan-23/pluto-2"
 const np = pyimport("numpy")
 const plt = pyimport("matplotlib.pyplot")
 const st = pyimport("spice_tools")
-const s = Simulation(pwd(), n=12)
+const s = Simulation(folder, n=12)
 
 const pepssifov = fov_polygon("NH_PEPSSI_S0", st.nh_in_wake)
 const swapfov = fov_polygon("NH_SWAP", st.nh_in_wake)
@@ -46,7 +47,7 @@ notipuidist(d::Distribution) = filter(x->x.t!=H_ipui && x.t!=He_ipui && x.t!=dum
 notipuidist(pos::AbstractVector) = notipuidist(Distribution(s,pos))
 notipuidist(et::Number) = notipuidist(location(et))
 
-const prefix = joinpath(pwd(),"data")
+const prefix = joinpath(folder,"data")
 const para = ParameterSet(prefix)
 const dt = Float64(para.dt)*u"s"
 const E,B = loadfields(prefix, 27)
