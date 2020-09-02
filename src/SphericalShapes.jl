@@ -145,7 +145,7 @@ function intersection(A,B,C,D)
     end
 end
 
-struct Rotated{SS, M} <: SphericalPolygon where {SS<:SphericalPolygon, M<:AbstractMatrix}
+struct Rotated{SS, M} <: SphericalPolygon
     sp::SS
     m::M
 end
