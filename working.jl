@@ -120,7 +120,9 @@ N = ceil(Int, finaltime/step)
 shell_pg! = UnBufferedGenerator(shell, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 50000, step)
 superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 13000, step)
 
-ps = trace_particles(superthermal_pg!, f, dom, step, N)
+#ps = trace_particles(superthermal_pg!, f, dom, step, N)
+
+#=
 kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
 
 function _traced_distribution(ps, kd, x, dx, N)
@@ -143,5 +145,6 @@ flyby_ets = utc2et"11:00":30:utc2et"13:00";
 ds = _traced_distribution.(Ref(ps), Ref(kd), location.(flyby_ets), s.dx*u"km", macroparticle_N(superthermal_pg!, 400u"km/s"*4.7e10u"km^-3"))
 fig, ax = especfigure();
 PlottingTools.plot_espec_scatter(fig, ax, flyby_ets, filter.(pepssifov, ds));
+=#
 
 nothing
