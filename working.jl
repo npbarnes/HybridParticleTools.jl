@@ -103,6 +103,10 @@ function superthermal()
     mag = rand(Pareto(4, 400))u"km/s"
     mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
 end
+function superthermal2()
+    mag = (400rand()+400)u"km/s"
+    mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
+end
 function shell()
     mag = 400.0u"km/s"
     mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
