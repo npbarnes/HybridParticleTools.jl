@@ -50,7 +50,7 @@ notipuidist(et::Number) = notipuidist(location(et))
 const prefix = joinpath(folder,"data")
 const para = ParameterSet(prefix)
 const dt = Float64(para.dt)*u"s"
-const E,B = loadfields(prefix, 27)
+const E,B = loadfields2(prefix, 27)
 
 function split(a)
     return (
@@ -113,7 +113,7 @@ function shell()
 end
 
 const f = Boris.Fields(E,B)
-const dom = Boris.Domain(extrema.(parent(E).knots))
+const dom = Boris.Domain(extrema.(E.xgrid.nodes))
 finaltime = 50000*dt
 step = 10dt
 N = ceil(Int, finaltime/step)
