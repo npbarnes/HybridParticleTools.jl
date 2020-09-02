@@ -1,6 +1,6 @@
 module HybridGrids
 
-export loadfields, loadvector
+export loadfields, loadvector, loadfields2
 
 using PyCall
 using Interpolations
@@ -49,12 +49,12 @@ struct VectorField{T,U,V}
     zinterp::V
     function VectorField(gx::Grid{T},gy,gz, F::AbstractArray{U,4}) where {T,U}
         @views begin
-            xinterp = extrapolate(interpolate(xgrid.nodes, F[:,:,:,1], Gridded(Linear())), Flat())
-            yinterp = extrapolate(interpolate(xgrid.nodes, F[:,:,:,2], Gridded(Linear())), Flat())
-            zinterp = extrapolate(interpolate(xgrid.nodes, F[:,:,:,3], Gridded(Linear())), Flat())
+            xinterp = extrapolate(interpolate(gx.nodes, F[:,:,:,1], Gridded(Linear())), Flat())
+            yinterp = extrapolate(interpolate(gy.nodes, F[:,:,:,2], Gridded(Linear())), Flat())
+            zinterp = extrapolate(interpolate(gz.nodes, F[:,:,:,3], Gridded(Linear())), Flat())
         end
         V = typeof(xinterp)
-        new{T,U,V}(xgrid, ygrid, zgrid, F, xinterp, yinterp, zinterp)
+        new{T,U,V}(gx, gy, gz, F, xinterp, yinterp, zinterp)
     end
 end
 
@@ -79,7 +79,7 @@ function contravariant(maingrid::Grid{T}, field) where T
     )
 end
 
-function (f::VectorField)(x)
+function (f::VectorField)(x...)
     SA[f.xinterp(x...), f.yinterp(x...), f.zinterp(x...)]
 end
 
