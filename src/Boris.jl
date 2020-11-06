@@ -53,8 +53,8 @@ Domain(boundaries::Tuple{T,T,T}) where T<:Tuple{U,U} where U = Domain(
     boundaries[1][1], boundaries[2][1], boundaries[3][1],
     boundaries[1][2], boundaries[2][2], boundaries[3][2]
 )
-in(x, d::Domain) = d.min_x <= x[1] <= d.max_x && d.min_y <= x[2] <= d.max_y && d.min_z <= x[3] <= d.max_z
-in(p::Particle, d::Domain) = in(p.x, d)
+Base.in(x, d::Domain) = d.min_x <= x[1] <= d.max_x && d.min_y <= x[2] <= d.max_y && d.min_z <= x[3] <= d.max_z
+Base.in(p::Particle, d::Domain) = in(p.x, d)
 function Random.rand(rng::AbstractRNG, d::Random.SamplerTrivial{Domain{T}}) where T
     d = d[]
     SVector{3,T}(
@@ -147,6 +147,21 @@ function trace_particles(add_particles!, fields, domain, dt, N; progress_bar=Pro
     list_of_ps = [empty_particle_list() for i in 1:nthreads()]
     @threads for thread in 1:nthreads()
         trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N; progress_bar=progress_bar)
+    end
+    ps = reduce(vcat, list_of_ps)
+    finish!(progress_bar)
+    return ps
+end
+
+function nfolds(x, n)
+    s = length(x) / n
+    [x[round(Int, (i-1)*s)+1:min(length(x), round(Int, i*s))] for i in 1:n]
+end
+
+function resume_trace!(ps, add_particles!, fields, domain, dt, N; progress_bar=Progress(N*nthreads()))
+    list_of_ps = nfolds(ps, nthreads())
+    @threads for thread in 1:nthreads()
+        trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N; progress_bar)
     end
     ps = reduce(vcat, list_of_ps)
     finish!(progress_bar)
