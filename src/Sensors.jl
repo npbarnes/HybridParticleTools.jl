@@ -38,7 +38,6 @@ end
 function differential_intensity(fov::SphericalShape, bin_edges, d::Distribution)
     Ω = area(fov)u"sr"
     dd = filter(fov, d)
-
     first = _differential_intensity(dd, bin_edges[1], bin_edges[2], Ω)
 
     ret = Vector{typeof(first)}(undef, length(bin_edges)-1)

@@ -36,8 +36,12 @@ const et_start = utc2et"11:30"
 const et_end   =  utc2et"14:01"
 ets = collect(et_start:(10*60):et_end)
 
+Hipuidist(d::Distribution) = filter(x->x.t==H_ipui, d)
+Hipuidist(pos::AbstractVector) = Hipuidist(Distribution(s,pos))
+Hipuidist(et::Number) = Hipuidist(location(et))
+
 ipuidist(d::Distribution) = filter(x->x.t==He_ipui, d)
-ipuidist(pos::AbstractVector) = ipuidist(Distribution(s,pos))
+ipuidist(pos::AbstractVector) = ipuidist(Distribution(s,pos, 2s.dx*u"km"))
 ipuidist(et::Number) = ipuidist(location(et))
 
 swdist(d::Distribution) = filter(x->x.t==H_sw || x.t==He_sw, d)
@@ -64,20 +68,33 @@ end
 struct UnBufferedGenerator{S,U,T}
     v_sampler::S
     x::U
+    dx::U
     y_extent::Tuple{U,U}
     z_extent::Tuple{U,U}
     N::Int64
     dt::T
-    function UnBufferedGenerator(v_sampler, x, ys, zs, N, dt)
-        new{typeof(v_sampler), typeof(x), typeof(dt)}(v_sampler,x,ys,zs,N,dt)
+    function UnBufferedGenerator(v_sampler, x, dx, ys, zs, N, dt)
+        new{typeof(v_sampler), typeof(x), typeof(dt)}(v_sampler,x,dx,ys,zs,N,dt)
     end
 end
 function (g::UnBufferedGenerator)(lst)
     ymin,ymax = g.y_extent
     zmin,zmax = g.z_extent
+    v = g.v_sampler()
+    x = @SVector zeros(typeof(g.x), 3)
     for i in 1:g.N
-        v = g.v_sampler()
-        x = SA[g.x + rand()*v[1]*g.dt, (ymax-ymin)*rand()+ymin, (zmax-zmin)*rand()+zmin]
+        while true # rejection sampling step
+            v = g.v_sampler()
+            if v[1] > zero(v[1]) # early rejection if the paricle is moving upstream
+                continue
+            end
+            x0 = g.x - rand()*g.dx
+            x1 = x0 + v[1]*g.dt
+            if x1 <= g.x-g.dx
+                x = SA[x1, (ymax-ymin)*rand()+ymin, (zmax-zmin)*rand()+zmin]
+                break
+            end
+        end
         push!(lst, Boris.Particle(x, v, e/(4m_p)))
     end
 end
@@ -100,8 +117,8 @@ function sphere_sample()
     z = sqrt(1-s)
     SA[2u*z, 2v*z, 1-2s]
 end
-function superthermal()
-    mag = rand(Pareto(4, 400))u"km/s"
+function superthermal(p=5)
+    mag = rand(Pareto(p-1, 400))u"km/s"
     mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
 end
 function superthermal2()
@@ -113,9 +130,30 @@ function shell()
     mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
 end
 
-const f = Boris.Fields(E,B)
-const dom = Boris.Domain(extrema.(E.xgrid.nodes))
+function _inv_F(y, va, vb)
+    f0 = 1/(5/4*vb - va)
+    C = f0*(vb-va)
+    if y < C
+        return y/f0 + va
+    else
+        return (4/(f0*vb^5)*(C - y) + vb^-4)^(-1/4)
+    end
+end
+"""va is lower cutoff velocity in sw frame, vb is injection velocity"""
+function flat_w_superthermal(va=0u"km/s", vb=219u"km/s")
+    y = rand()
+    mag = _inv_F(y, va, vb)
+    mag*sphere_sample() + SA[-400.0, 0.0, 0.0]u"km/s"
+end
 
+const f = Boris.Fields(E,B)
+#const dom = Boris.Domain(Tuple(t.*u"km" for t in extrema.(E.xgrid.nodes)))
+
+
+# approx bins for PEPSSI Helium (I assume that means signly ionized):
+const pepssi_bin_names = ["L13", "L11", "L09", "L07", "L05", "L03", "L01"]
+const pepssi_bin_edges = [2.2, 4.79, 9.485, 18.05, 33.4, 59.8, 106, 183]u"keV"
+const pepssi_S0_area = 0.092677
 
 
 

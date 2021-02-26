@@ -80,8 +80,8 @@ function xstep(x,dt,v)
 end
 
 function step(x,v,dt,E,B,qm)
-    EE = qm*E(x[1], x[2], x[3])
-    BB = qm*B(x[1], x[2], x[3])
+    EE = qm*E(ustrip(u"km",x[1]), ustrip(u"km",x[2]), ustrip(u"km",x[3]))u"V/m"
+    BB = qm*B(ustrip(u"km",x[1]), ustrip(u"km",x[2]), ustrip(u"km",x[3]))u"T"
     rv = vstep(v, dt, EE, BB)
     rx = xstep(x, dt, rv)
     return rx, rv
@@ -119,7 +119,7 @@ function advance!(particles, fields, domain, dt)
     for (i,p) in enumerate(particles)
         bounds_handler!(p, domain)
         p.x, p.v = step(p, fields, dt)
-        if p.x[1] < domain.min_x # delete particles after they go too far downstream
+        if p.x[1] < domain.min_x || p.x[1] > domain.max_x # delete particles after they go too far downstream or upstream
             push!(to_delete, i)
         end
     end

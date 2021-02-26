@@ -1,7 +1,7 @@
 module PlottingTools
 export  plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, plotdist, plotshape,
-        plot_colored_line, mapfigure, plot_dist, plot_pepssi, plot_sun, plot_pluto, especfigure,
-        plot_espec_scatter
+        plot_colored_line, mapfigure, plot_dist, plot_dist_hist, plot_pepssi, plot_sun, plot_pluto, especfigure,
+        plot_espec_scatter, plot_pepssi_view, datefigure
 
 using PyCall
 using LinearAlgebra
@@ -12,6 +12,8 @@ using ..Utility
 using ..SphericalShapes
 using ..Sensors
 using ..Spacecraft
+using ..Distributions
+using ..Simulations
 
 const plt = PyNULL()
 const Axes3D = PyNULL()
@@ -114,7 +116,7 @@ plot_colored_line(ax, args...; kwargs...) = py"coloredline"(ax, args...; kwargs.
 function mapcoords(vs; from_crs=vec_coords, to_crs=map_projection)
     mc = to_crs.transform_points(from_crs,
         x=getindex.(vs,1),
-        y=getindex.(vs,2),
+        y=-getindex.(vs,2),
         z=getindex.(vs,3)
     )
     @views (mc[:,1], mc[:,2])
@@ -172,13 +174,24 @@ function plot_pepssi(ax, et)
     end
 end
 
+plot_dist(d;kwargs...) = plot_dist(mapfigure()..., d; kwargs...)
 function plot_dist(fig, ax, d; marker=".", s=30.0, kwargs...)
     l = -asunitless(d.v)
     E = ustrip(uconvert.(u"keV", energy.(d)))
     mappable = ax.scatter(mapcoords(l)...; marker=marker, s=s, c=E, kwargs...)
     cb = fig.colorbar(mappable)
     cb.set_label("Energy (keV)")
+    fig, ax
 end
+function plot_dist_hist(fig, ax, d;kwargs...)
+    np = pyimport("numpy")
+    l = -asunitless(d.v)
+    #H, xs, ys = np.histogram2d(mapcoords(l)..., bins=100, weights=ustrip.(d.n))
+    #ax.pcolormesh(xs, ys, H, transform=map_projection)
+    h, xs, ys, mappable = ax.hist2d(mapcoords(l)..., bins=100, weights=ustrip.(d.n); kwargs...)
+    ax.set_global()
+end
+
 plot_sun(ax) = ax.scatter(mapcoords([[1.,0.,0.]])..., marker="*", edgecolors="k", color="gold", s=200)
 plot_pluto(ax,pos::AbstractArray) = ax.scatter(mapcoords([-ustrip(pos)])..., marker=raw"$♥$",  edgecolors="k", color="chocolate", s=100)
 plot_pepssi_view(s, et) = plot_pepssi_view(mapfigure()..., s, et)
@@ -229,8 +242,8 @@ function scatterargs(x, eachy...)
 end
 expandby(a, n) = reduce(vcat, fill.(a,n))
 
-"Prepare a spectrogram figure"
-function especfigure()
+"Prepare a figure with dates on the x axis"
+function datefigure()
     fig, ax = plt.subplots()
     # Setting xlim to work around an error that occurs when you add a Datetime
     # locator and formatter to an axis that contains zero. (An empty axis
@@ -244,6 +257,11 @@ function especfigure()
     ax.xaxis.set_major_locator(locator)
     ax.xaxis.set_major_formatter(formatter)
     ax.set_xlabel("Time")
+    fig, ax
+end
+"Prepare a spectrogram figure"
+function especfigure()
+    fig, ax = datefigure()
     ax.set_ylabel("Energy (keV)")
 
     return fig,ax
@@ -275,5 +293,38 @@ function plot_espec_scatter(fig, ax, xs, ds)
     st = pyimport("spice_tools")
     ax.scatter(st.et2pydatetime.(xs), ustrip.(u"keV",ys), s=20fs./maximum(fs))
 end
+
+function plot_dist_projections(d, time, et=utc2et(time))
+    fig, axs = plt.subplots(ncols=3)
+    ax1,ax2,ax3 = axs
+
+    ax1.hist2d(ustrip.(u"km/s", getindex.(d.v,1)), ustrip.(u"km/s", getindex.(d.v,2)), bins=50, weights=ustrip.(d.n))
+    ax1.set_xlabel("x")
+    ax1.set_ylabel("y")
+
+    ax2.hist2d(ustrip.(u"km/s", getindex.(d.v,1)), ustrip.(u"km/s", getindex.(d.v,3)), bins=50, weights=ustrip.(d.n))
+    ax2.set_xlabel("x")
+    ax2.set_ylabel("z")
+
+    ax3.hist2d(ustrip.(u"km/s", getindex.(d.v,2)), ustrip.(u"km/s", getindex.(d.v,3)), bins=50, weights=ustrip.(d.n))
+    ax3.set_xlabel("y")
+    ax3.set_ylabel("z")
+
+    fig.suptitle(time)
+    for ax in axs
+        ax.set_aspect("equal")
+    end
+    xbounds = flatten(ax.get_xlim() for ax in axs)
+    xl, xr = extrema(xbounds)
+    ybounds = flatten(ax.get_ylim() for ax in axs)
+    yl, yr = extrema(ybounds)
+
+    for ax in axs
+        ax.set_xlim([xl, xr])
+        ax.set_ylim([yl, yr])
+    end
+    fig, ax
+end
+
 
 end # module

@@ -1,9 +1,14 @@
 include("working.jl")
-finaltime = 25000*dt
+dom = Boris.Domain(-20.0u"Rp", -32u"Rp", -50u"Rp", 30u"Rp", 32u"Rp", 50u"Rp")
+L = dom.max_x - dom.min_x
+# finaltime is the maximum of two transit times or one gyroperiod
+finaltime = max(2L/400u"km/s", 2pi*4m_p/(e*0.1u"nT"))
+@show uconvert(u"s", finaltime)
 step = 20dt
 N = ceil(Int, finaltime/step)
-shell_pg! = UnBufferedGenerator(shell, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 50000, step)
-superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 13000, step)
+#shell_pg! = UnBufferedGenerator(shell, dom.max_x, 20.0u"km", (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 20000, step)
+dx = ([superthermal() for i in 1:1000000] |> a->getindex.(a,1) |> a->quantile(a,0.99)) * step
+superthermal_pg! = UnBufferedGenerator(superthermal, dom.max_x, dx, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 45000, step)
 
 
 ps = trace_particles(superthermal_pg!, f, dom, step, N)
@@ -34,4 +39,44 @@ PlottingTools.plot_espec_scatter(fig, ax, flyby_ets, filter.(pepssifov, ds));
 
 function plot_ppc(ax, kd, ets)
     ax.plot(ets, length.(inrange.(Ref(kd), [ustrip.(u"km", l) for l in location.(ets)], 500)))
+end
+
+
+function diff_inten_by_angle(d, θs=range(0,pi, length=2000); bin_edges=pepssi_bin_edges, cone_angle=0.0)
+    fovs = [SCircle([cos(θ); rotmat(-cone_angle)*[0.0, sin(θ)]], acos(1-pepssi_S0_area/(2pi))) for θ in θs]
+    dis = differential_intensity.(fovs, Ref(bin_edges), Ref(d))
+    θs, dis
+end
+
+function sample_dist(p=5, n=4.7e10u"km^-3", l=Int(1e6))
+    Distribution(
+        [superthermal(p) for i in 1:l],
+        fill(4m_p, l),
+        fill(1e, l),
+        fill(n/l, l),
+        fill(He_ipui, l)
+    )
+end
+
+function plot_diff_inten_by_angle(θs, dis; bins=1:length(pepssi_bin_edges)-1)
+    fig, ax = plt.subplots()
+    for i in bins
+        ax.plot(rad2deg.(θs), ustrip.(u"keV^-1*cm^-2*s^-1*sr^-1", getindex.(dis,i)), label="$(pepssi_bin_edges[i]) - $(pepssi_bin_edges[i+1]) ($(pepssi_bin_names[i]))")
+    end
+
+    ax.set_yscale("log")
+    ax.set_xlim([0,180])
+    ticker = pyimport("matplotlib.ticker")
+    ax.xaxis.set_major_locator(ticker.MultipleLocator(10))
+
+    ax.plot([30, 40, 50], [40, 13, 1], color="black", label="uncertainty (eyeballed from Kollmann et al. 2019 Figure 1)")
+    ax.plot([40, 50, 60], [500, 230, 20], color="black")
+
+    ax.plot([30, 40], [500,500], color="black", linestyle="--")
+    ax.plot([50, 60], [1, 1], color="black", linestyle="--")
+
+    ax.set_ylabel("Differential Intensity\n(1/(keV cm\$^2\$ s sr)")
+    ax.set_xlabel("Cone angle")
+    fig.legend()
+    fig, ax
 end

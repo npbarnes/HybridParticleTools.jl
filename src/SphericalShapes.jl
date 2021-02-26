@@ -104,7 +104,7 @@ SPolygon(o::PyObject) = SPolygon(o.inside, listofvectors(o.vertices))
 inside(sp::SPolygon) = sp.inside
 vertices(sp::SPolygon) = sp.vertices
 
-r_transform(s::SPolygon) = SPolygon(r_transform(s.inside), r_transform.(s.vertices))
+Utility.r_transform(s::SPolygon) = SPolygon(r_transform(s.inside), r_transform.(s.vertices))
 
 """
 Compute angle between the spherical arc AB and the spherical arc BC.
@@ -158,7 +158,7 @@ SPolygon(r::Rotated) = SPolygon(inside(r), collect(vertices(r)))
 
 struct SCircle{T,U} <: SphericalShape
     center::SVector{3,T}
-    angle::U
+    angle::U # Angle from center to the edge of the circle
     cosangle::U
     function SCircle(center,angle)
         @assert angle >= 0 && angle <= π

@@ -1,5 +1,5 @@
 module Distributions
-export Distribution, DistElement
+export Distribution, DistElement, hastag
 
 using StaticArrays
 using StructArrays

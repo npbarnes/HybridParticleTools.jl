@@ -1,6 +1,6 @@
 module Utility
 export  listofvectors, listofmatrices, geomspace, asunitless, viewasarray,
-        @utc2et_str, @utc2datetime_str, getcolumns, r_transform
+        @utc2et_str, @utc2datetime_str, getcolumns, r_transform, utc2et, rotmat, rotmatX
 using StaticArrays
 using StructArrays
 using Unitful
@@ -45,11 +45,12 @@ asunitless(A::AbstractArray{SA}) where {Size, Q<:Quantity, SA<:StaticArray{Size,
 viewasarray(x::AbstractArray{SA,1}) where {S,T,SA<:StaticArray{S,T}} = reshape(reinterpret(T,x), (size(SA)...,:))
 getcolumns(x::AbstractArray{SA<:StaticArray,1}) = Tuple(getindex.(x, i) for i in 1:length(SA))
 
+utc2et(tstr) = st.sp.str2et("2015-7-14T$tstr")
 macro utc2et_str(t)
-    :(st.sp.str2et("2015-7-14T$($t)"))
+    :(utc2et($t))
 end
 macro utc2datetime_str(t)
-    :(st.et2pydatetime(@pluto_et_str $t))
+    :(st.et2pydatetime(@utc2et_str $t))
 end
 
 # This specific method is needed for filter! to work on StructArrays
@@ -59,15 +60,21 @@ function deleteat!(sa::StructArray, r::UnitRange{<:Integer})
     end
 end
 
-# The IMF reversal vector transform
-function r_transform(v::AbstractVector)
-    r = similar(v)
-    r[1] = v[1]
-    r[2] = -v[2]
-    r[3] = -v[3]
-    return r
-end
-r_transform(v::StaticArray) = SA[v[1],-v[2],-v[3]]
+"""2d rotation matrix"""
+rotmat(t) = SA[
+    cos(t) -sin(t);
+    sin(t) cos(t)
+]
+
+"""3d rotation matrix round the X axis"""
+rotmatX(t) = SA[
+    1    0     0;
+    0 cos(t) -sin(t);
+    0 sin(t) cos(t);
+]
+
+"""r_transform is the IMF rotation transformation for vectors"""
+r_transform(v, θ=180.0) = rotmatX(θ) * v
 
 
 end # module

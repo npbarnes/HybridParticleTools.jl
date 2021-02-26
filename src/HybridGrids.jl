@@ -1,6 +1,6 @@
 module HybridGrids
 
-export loadfields, loadvector, loadfields2
+export loadfields, loadvector, loadfields2, loadscalar, VectorField
 
 using PyCall
 using Interpolations
@@ -79,18 +79,28 @@ function contravariant(maingrid::Grid{T}, field) where T
     )
 end
 
-function (f::VectorField)(x...)
-    SA[f.xinterp(x...), f.yinterp(x...), f.zinterp(x...)]
+function (f::VectorField)(x, y, z)
+    SA[f.xinterp(x, y, z), f.yinterp(x, y, z), f.zinterp(x, y, z)]
 end
 
 function loadvector(prefix, name, step=-1)
     h = hr(prefix, name)
     _, raw = h.get_timestep(step)
-    ret = similar(raw, SVector{3,Float64}, size(raw)[1:end-1])
+    data = similar(raw, SVector{3,Float64}, size(raw)[1:end-1])
     for i in axes(raw,1), j in axes(raw,2), k in axes(raw,3)
-        ret[i,j,k] = SVector{3,Float64}(raw[i,j,k,:])
+        data[i,j,k] = SVector{3,Float64}(raw[i,j,k,:])
     end
-    return ret
+    para  = ParameterSet(prefix)
+    nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
+
+    interpolate(nodes, data, Gridded(Linear()))
+end
+
+function loadscalar(prefix, name, step=-1)
+    _, data = hr(prefix, name).get_timestep(step)
+    para = ParameterSet(prefix)
+    nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
+    interpolate(nodes, data, Gridded(Linear()))
 end
 
 # There was a problem writing bt data for 2020-Jan-23/pluto-2.
@@ -98,10 +108,11 @@ end
 function loadfields2(prefix, step=-1)
     _, E_data = hr(prefix, "E").get_timestep(step)
     _, B_data = hr(prefix, "bt").get_timestep(step)
-    E_data *= u"km/s^2"*(m_p/e)
-    B_data *= u"s^-1"*(m_p/e)
     para = ParameterSet(prefix)
-    nodes = Tuple(convert(Array{Float64}, gp)*u"km" for gp in para.grid_points)
+    mion = para.ion_amu
+    E_data = ustrip.(u"V/m", E_data.*u"km/s^2".*(mion*m_p/e))
+    B_data = ustrip.(u"T", B_data.*u"s^-1".*(mion*m_p/e))
+    nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
     maingrid = Grid(nodes)
     E = contravariant(maingrid, E_data)
     B = covariant(maingrid, B_data)
@@ -126,5 +137,7 @@ function loadfields(prefix, step=-1)
     B = extrapolate(B, Flat())
     return E,B
 end
+
+
 
 end # module
