@@ -9,6 +9,9 @@ using Unitful
 using Statistics
 using IterTools: firstrest
 
+includet("FieldLines.jl")
+using .FieldLines
+
 using PyCall
 using PyPlot
 const plt = pyimport("matplotlib.pyplot")
@@ -46,6 +49,7 @@ end
 
 #p_seeded   = (p_seeded...,   fieldline=find_fieldline(p_seeded))
 const p_unseeded = (_p_unseeded..., fieldline=find_fieldline(_p_unseeded))
+
 
 
 function plot_dist1d(dist)
