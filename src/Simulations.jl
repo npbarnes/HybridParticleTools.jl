@@ -87,9 +87,9 @@ function _Simulation(path, o::PyObject, separate_mrat=usual_mrat_breakdown)
 
     Simulation(path, para, xs, vs, ms, qs, Ns, ts)
 end
-function Simulation(path; n=0, buildtree=false)
+function Simulation(path; n=0, buildtree=false, step=-1)
     hpr = pyimport("HybridParticleReader")
-    ls = hpr.LastStep(path, n=n)
+    ls = hpr.AStep(path, n=n, step=step)
     sim = _Simulation(path, ls)
     if buildtree
         # Accessing the tree the first time causes it to be constructed
