@@ -23,11 +23,12 @@ using HybridTools.ParameterSets
 using HybridTools.PlutoUnits
 using HybridTools.Spacecraft
 
-folder = "/media/nathan/DATAPART11/2020-Thu-Jan-23/pluto-2"
+#folder = "/media/nathan/DATAPART11/2020-Thu-Jan-23/pluto-2"
+folder = "/media/nathan/DATAPART11/2020-Mon-Aug-10/pluto-1"
 const np = pyimport("numpy")
 const plt = pyimport("matplotlib.pyplot")
 const st = pyimport("spice_tools")
-const s = Simulation(folder, n=12)
+const s = Simulation(folder, n=6)
 
 const pepssifov = fov_polygon("NH_PEPSSI_S0", st.nh_in_wake)
 const swapfov = fov_polygon("NH_SWAP", st.nh_in_wake)
@@ -55,7 +56,8 @@ notipuidist(et::Number) = notipuidist(location(et))
 const prefix = joinpath(folder,"data")
 const para = ParameterSet(prefix)
 const dt = Float64(para.dt)*u"s"
-const E,B = loadfields2(prefix, 27)
+#const E,B = loadfields2(prefix, 27)
+const E,B = loadfields2(prefix)
 
 function split(a)
     return (
