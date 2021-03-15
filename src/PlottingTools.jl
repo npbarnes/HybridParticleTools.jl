@@ -4,6 +4,7 @@ export  plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, 
         plot_espec_scatter, plot_pepssi_view, datefigure
 
 using PyCall
+using PyPlot
 using LinearAlgebra
 using Unitful
 using IterTools
@@ -194,15 +195,27 @@ end
 
 plot_sun(ax) = ax.scatter(mapcoords([[1.,0.,0.]])..., marker="*", edgecolors="k", color="gold", s=200)
 plot_pluto(ax,pos::AbstractArray) = ax.scatter(mapcoords([-ustrip(pos)])..., marker=raw"$♥$",  edgecolors="k", color="chocolate", s=100)
-plot_pepssi_view(s, et) = plot_pepssi_view(mapfigure()..., s, et)
+plot_pepssi_view(et::Float64, d::Distribution, args...) = plot_pepssi_view(mapfigure()..., et, d, args...)
+#=
 function plot_pepssi_view(fig, ax, s, et)
     l = location(et)
-    d = Distribution(s, l)
+    #l[3] = zero(l[3])
+    d = Distribution(s, l, 2s.dx*u"km")
     d = filter(hastag(He_ipui), d)
+    d.v .= Ref(rotmatX(deg2rad(-20))) .* d.v
     plot_dist(fig, ax, d)
     plot_sun(ax)
     plot_pluto(ax, l)
     plot_pepssi(ax, et)
+end
+=#
+function plot_pepssi_view(fig::Figure, ax::PyObject, et::Float64, d::Distribution, x=location(et), R=I)
+    d.v .= Ref(R) .* d.v
+    plot_dist(fig, ax, d)
+    plot_sun(ax)
+    plot_pluto(ax, R*x)
+    plot_pepssi(ax, et)
+    fig, ax
 end
 
 
