@@ -114,12 +114,17 @@ function bounds_handler!(p, domain)
     end
 end
 
+σ(v) = 1e-15u"cm^2"
+nn(r) = 1e15*(1e15*(1u"Rp"/r)^25 + 5e9*(1u"Rp"/r)^8)u"km^-3"
 function advance!(particles, fields, domain, dt)
     to_delete = Int[]
     for (i,p) in enumerate(particles)
         bounds_handler!(p, domain)
         p.x, p.v = step(p, fields, dt)
-        if p.x[1] < domain.min_x || p.x[1] > domain.max_x # delete particles after they go too far downstream or upstream
+        if (p.x[1] < domain.min_x || p.x[1] > domain.max_x # particles after they go too far downstream or upstream
+            || norm(p.x) < 2900u"km" # particles under the exobase
+            || rand() < dt*nn(norm(p.x))*σ(p.v)*norm(p.v) # particles that undergo charge exchange
+        )
             push!(to_delete, i)
         end
     end
