@@ -157,6 +157,14 @@ const pepssi_bin_names = ["L13", "L11", "L09", "L07", "L05", "L03", "L01"]
 const pepssi_bin_edges = [2.2, 4.79, 9.485, 18.05, 33.4, 59.8, 106, 183]u"keV"
 const pepssi_S0_area = 0.092677
 
+pepssi_view(R, time::String) = pepssi_view(R, utc2et(time))
+function pepssi_view(R, time::Float64)
+    d = ipuidist(time)
+    d.v .= Ref(R) .* d.v
+    fig, ax = plot_dist(d)
+    #plotshape(ax, fov_polygon("NH_PEPSSI_S0", utc2et"12:18"), color="blue")
 
+    fig, ax
+end
 
 nothing
