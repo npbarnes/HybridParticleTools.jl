@@ -1,6 +1,6 @@
 module Boris
 
-export boris, trace_particles
+export trace_particles
 
 using Base.Threads
 using ProgressMeter
@@ -87,18 +87,6 @@ function step(x,v,dt,E,B,qm)
     return rx, rv
 end
 step(p::Particle, f::Fields, dt) = step(p.x, p.v, dt, f.E, f.B, p.qm)
-
-function boris(xinit, vinit, dt, E, B, N, m=m_p, q=e)
-    ret_x = Vector{typeof(xinit)}(undef, N+1)
-    ret_v = Vector{typeof(vinit)}(undef, N+1)
-    ret_x[1] = xinit
-    ret_v[1] = vinit
-    qm = q/m
-    @inbounds for i in 1:N
-        ret_x[i+1], ret_v[i+1] = step(ret_x[i], ret_v[i], dt, E, B, qm)
-    end
-    return ret_x, ret_v
-end
 
 function bounds_handler!(p, domain)
     if p.x[2] > domain.max_y
