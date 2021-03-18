@@ -172,4 +172,10 @@ function pepssi_view(R, time::Float64)
     fig, ax
 end
 
+function plot_view(x)
+    fig, ax = plot_dist(ipuidist(x))
+    plot_sun(ax)
+    plot_pluto(ax, x)
+end
+
 nothing
