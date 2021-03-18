@@ -146,13 +146,13 @@ function trace_particles(add_particles!, fields, domain, dt, N; progress_bar=Pro
     return ps
 end
 
-function nfolds(x, n)
+function splitsublists(x, n)
     s = length(x) / n
     [x[round(Int, (i-1)*s)+1:min(length(x), round(Int, i*s))] for i in 1:n]
 end
 
 function resume_trace!(ps, add_particles!, fields, domain, dt, N; progress_bar=Progress(N*nthreads()))
-    list_of_ps = nfolds(ps, nthreads())
+    list_of_ps = splitsublists(ps, nthreads())
     @threads for thread in 1:nthreads()
         trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N; progress_bar)
     end
