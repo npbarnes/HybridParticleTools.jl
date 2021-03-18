@@ -53,6 +53,11 @@ notipuidist(d::Distribution) = filter(x->x.t!=H_ipui && x.t!=He_ipui && x.t!=dum
 notipuidist(pos::AbstractVector) = notipuidist(Distribution(s,pos))
 notipuidist(et::Number) = notipuidist(location(et))
 
+ch4dist(d::Distribution) = filter(x->x.t==CH4_chex || x.t==CH4_photo || x.t==CH4_stagnant, d)
+ch4dist(pos::AbstractVector) = ch4dist(Distribution(s,pos, s.dx*u"km"))
+ch4dist(et::Number) = ch4dist(location(et))
+
+
 const prefix = joinpath(folder,"data")
 const para = ParameterSet(prefix)
 const dt = Float64(para.dt)*u"s"
