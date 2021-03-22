@@ -22,13 +22,7 @@ struct Grid{T}
     nodes::NTuple{3, Vector{T}}
 end
 Grid(x,y,z) = Grid((x,y,z))
-struct YeeGrid{T}
-    maingrid::Grid{T}
-    dualgrid::Grid{T}
-    function YeeGrid(maingrid::Grid{T}) where T
-        new{T}(maingrid, _dualgrid(maingrid))
-    end
-end
+
 function _ave(q)
     ret = similar(q)
     ret[1:end-1] = 0.5*(q[1:end-1] + q[1+1:end])
@@ -118,26 +112,5 @@ function loadfields2(prefix, step=-1)
     B = covariant(maingrid, B_data)
     return E,B
 end
-
-function loadfields(prefix, step=-1)
-    E_data = loadvector(prefix, "E", step)u"km/s^2" * (m_p/e)
-    B_data = loadvector(prefix, "bt", step)u"s^-1" * (m_p/e)
-    E_data = [uconvert.(u"V/m", dat) for dat in E_data]
-    B_data = [uconvert.(u"T", dat) for dat in B_data]
-    para = ParameterSet(prefix)
-    nodes = Tuple(convert(Array{Float64}, gp)*u"km" for gp in para.grid_points)
-    E = interpolate(nodes, E_data, Gridded(Linear()))
-    B = interpolate(nodes, B_data, Gridded(Linear()))
-
-    # Fixed extrapolations are broken in Interpolations.jl
-    #Bsw = SA[0.0, Float64(para.b0_init), 0.0]u"T"
-    #Esw = -SA[-Float64(para.vsw), 0.0, 0.0]u"km/s" × Bsw
-
-    E = extrapolate(E, Flat())
-    B = extrapolate(B, Flat())
-    return E,B
-end
-
-
 
 end # module
