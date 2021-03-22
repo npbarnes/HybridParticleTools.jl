@@ -77,6 +77,10 @@ function (f::VectorField)(x, y, z)
     SA[f.xinterp(x, y, z), f.yinterp(x, y, z), f.zinterp(x, y, z)]
 end
 
+"""Loads a vector field from the simulation and interpolates it.
+This method ignores the Yee grid and assumes that the vector components
+are colocated.
+"""
 function loadvector(prefix, name, step=-1)
     h = hr(prefix, name)
     _, raw = h.get_timestep(step)
@@ -97,9 +101,7 @@ function loadscalar(prefix, name, step=-1)
     interpolate(nodes, data, Gridded(Linear()))
 end
 
-# There was a problem writing bt data for 2020-Jan-23/pluto-2.
-# Timestep 27 is the last good step.
-function loadfields2(prefix, step=-1)
+function loadfields(prefix, step=-1)
     _, E_data = hr(prefix, "E").get_timestep(step)
     _, B_data = hr(prefix, "bt").get_timestep(step)
     para = ParameterSet(prefix)
