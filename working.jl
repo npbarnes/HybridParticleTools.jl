@@ -23,6 +23,8 @@ using HybridTools.ParameterSets
 using HybridTools.PlutoUnits
 using HybridTools.Spacecraft
 
+# There was a problem writing bt data for 2020-Jan-23/pluto-2.
+# Timestep 27 is the last good step.
 #folder = "/media/nathan/DATAPART11/2020-Thu-Jan-23/pluto-2"
 folder = "/media/nathan/DATAPART11/2020-Mon-Aug-10/pluto-1"
 const np = pyimport("numpy")
@@ -56,7 +58,6 @@ notipuidist(et::Number) = notipuidist(location(et))
 ch4dist(d::Distribution) = filter(x->x.t==CH4_chex || x.t==CH4_photo || x.t==CH4_stagnant, d)
 ch4dist(pos::AbstractVector) = ch4dist(Distribution(s,pos, s.dx*u"km"))
 ch4dist(et::Number) = ch4dist(location(et))
-
 
 const prefix = joinpath(folder,"data")
 const para = ParameterSet(prefix)
