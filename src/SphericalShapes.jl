@@ -23,8 +23,6 @@ function circular_index(a, i)
 end
 
 abstract type SphericalShape end
-function area(::SphericalShape) end
-function contains(::SphericalShape, P) end
 (s::SphericalShape)(P) = contains(s, P)
 # Broadcast as a scalar
 Base.broadcastable(ss::SphericalShape) = Ref(ss)
@@ -32,13 +30,13 @@ Base.broadcastable(ss::SphericalShape) = Ref(ss)
 struct FullSphere{T<:Number} <: SphericalShape end
 FullSphere() = FullSphere{Float64}()
 area(::FullSphere{T}) where T = 4T(π)
-contains(::FullSphere, P) = true
+Base.contains(::FullSphere, P) = true
 
 
 struct NoSphere{T<:Number} <: SphericalShape end
 NoSphere() = NoSphere{Float64}()
 area(::NoSphere{T}) where T = zero(T)
-contains(::NoSphere, P) = false
+Base.contains(::NoSphere, P) = false
 
 "Abstract Spherical Polygons have edges that are great circles"
 abstract type SphericalPolygon <: SphericalShape end
@@ -62,7 +60,7 @@ arc intersects edges of the polygon and even number of times (including zero),
 then P is inside. If the arc intersects the edges of the polygon an odd number
 of times, then P is outside.
 """
-function contains(sp::SphericalPolygon, P)
+function Base.contains(sp::SphericalPolygon, P)
     P = P ./ norm(P)
     I = (intersection(A,B,P,inside(sp)) for (A,B) in edges(sp))
     return count(!isnothing, I) % 2 == 0
@@ -168,7 +166,7 @@ struct SCircle{T,U} <: SphericalShape
 end
 inside(c::SCircle) = c.center
 area(c::SCircle) = 2π*(1-c.cosangle)
-function contains(c::SCircle, P)
+function Base.contains(c::SCircle, P)
     P = P ./ norm(P)
     cosine = c.center ⋅ P
     return cosine >= c.cosangle
