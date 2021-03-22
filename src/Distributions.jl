@@ -1,5 +1,5 @@
 module Distributions
-export Distribution, DistElement, hastag
+export Distribution, DistElement, hastag, hasanytag
 
 using StaticArrays
 using StructArrays
@@ -15,8 +15,11 @@ struct DistElement{U,V,W,X}
     t::Tag
 end
 Base.show(io::IO, e::DistElement) = print(io, "DistElement(v=SA[$(e.v[1]),$(e.v[2]),$(e.v[3])], m=$(e.m), q=$(e.q), n=$(e.n))")
-hastag(t::Tag, e::DistElement) = (e.t == t)
-hastag(t::Tag) = (e->e.t==t)
+hastag(e, t) = (e.t == t)
+hastag(t) = (e->hastag(e,t))
+hasanytag(e::DistElement, tags...) = any(hastag(e,t) for t in tags)
+hasanytag(tags...) = (e->hasanytag(e, tags))
+
 
 const Distribution = StructArray{DistElement{U,V,W,X}} where {U,V,W,X}
 Base.show(io::IO, d::Distribution) = print(io, "$(length(d))-element Distribution...")
