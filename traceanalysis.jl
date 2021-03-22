@@ -1,19 +1,17 @@
 include("working.jl")
-dom = Boris.Domain(-50.0u"Rp", -32u"Rp", -50u"Rp", 20u"Rp", 32u"Rp", 50u"Rp")
+dom = Boris.Domain(-20.0u"Rp", -32u"Rp", -50u"Rp", 20u"Rp", 32u"Rp", 50u"Rp")
 L = dom.max_x - dom.min_x
 transittime = L/400u"km/s"
 gyroperiod = 2pi*4m_p/(e*0.1u"nT")
-finaltime = 3transittime
+finaltime = 2transittime
 @show uconvert(u"s", finaltime)
 timestep = 20dt
 N = ceil(Int, finaltime/timestep)
 #shell_pg! = UnBufferedGenerator(shell, dom.max_x, 20.0u"km", (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 20000, step)
-dx = ([superthermal() for i in 1:1000000] |> a->getindex.(a,1) |> a->quantile(a,0.99)) * timestep
-superthermal_pg! = UnBufferedGenerator(shell, dom.max_x, dx, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 4500, timestep)
-
+dx = ([shell() for i in 1:1000000] |> a->getindex.(a,1) |> a->quantile(a,0.99)) * timestep
+superthermal_pg! = UnBufferedGenerator(shell, dom.max_x, dx, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 3000, timestep)
 
 ps = trace_particles(superthermal_pg!, f, dom, timestep, N)
-
 
 kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
 
