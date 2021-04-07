@@ -51,10 +51,11 @@ plot_sphere(ax, r, x_offset=0; kwargs...) = py"plot_sphere"(ax, r, xoffset, kwar
 function mapcoords(vs; from_crs=vec_coords, to_crs=map_projection)
     mc = to_crs.transform_points(from_crs,
         x=getindex.(vs,1),
-        y=-getindex.(vs,2),
+        y=getindex.(vs,2),
         z=getindex.(vs,3)
     )
-    @views (mc[:,1], mc[:,2])
+    # Use the negative of the longitudes because we're looking from the inside of the sphere
+    @views (-mc[:,1], mc[:,2])
 end
 
 function plot_3d_dist(ax, d)
