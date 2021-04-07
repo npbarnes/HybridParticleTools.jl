@@ -1,7 +1,7 @@
 module PlottingTools
 export  plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, plotdist, plotshape,
         plot_colored_line, mapfigure, plot_dist, plot_dist_hist, plot_pepssi, plot_sun, plot_pluto, especfigure,
-        plot_espec_scatter, plot_pepssi_view, datefigure
+        plot_espec_scatter, plot_pepssi_view, datefigure, plotshape_patch, diff_inten_ongrid, platecarree, polygoncolor
 
 using PyCall
 using PyPlot
@@ -16,22 +16,28 @@ using ..Spacecraft
 using ..Distributions
 using ..Simulations
 
-const plt = PyNULL()
 const Axes3D = PyNULL()
 const ccrs = PyNULL()
 const unit_sphere = PyNULL()
 const map_projection = PyNULL()
 const vec_coords = PyNULL()
 const geodetic = PyNULL()
+const platecarree = PyNULL()
+const Rectangle = PyNULL()
+const LogNorm = PyNULL()
+const mcoll = PyNULL()
 
 function __init__()
-    copy!(plt, pyimport("matplotlib.pyplot"))
     copy!(Axes3D, pyimport("mpl_toolkits.mplot3d").Axes3D)
     copy!(ccrs, pyimport("cartopy.crs"))
     copy!(unit_sphere, ccrs.Globe(semimajor_axis=1., semiminor_axis=1., ellipse=nothing))
     copy!(map_projection, ccrs.Mollweide(globe=unit_sphere))
     copy!(vec_coords, map_projection.as_geocentric())
     copy!(geodetic, map_projection.as_geodetic())
+    copy!(platecarree, ccrs.PlateCarree(globe=unit_sphere))
+    copy!(Rectangle, pyimport("matplotlib.patches").Rectangle)
+    copy!(LogNorm, pyimport("matplotlib.colors").LogNorm)
+    copy!(mcoll, pyimport("matplotlib.collections"))
 
     py"""
     import numpy as np
@@ -75,6 +81,14 @@ function plotshape(ax, sc::SCircle; kwargs...)
     ax.plot(mapcoords(points, to_crs=geodetic)...; transform=geodetic, kwargs...)
 end
 
+function plotshape(ax, r::LLAlignedRectangle; kwargs...)
+    ax.plot(rad2deg.([-r.lon[1], -r.lon[2], -r.lon[2], -r.lon[1]]), [r.lat[1], r.lat[1], r.lat[2], r.lat[2]]; transform=platecarree, kwargs...)
+end
+function plotshape_patch(ax, r::LLAlignedRectangle; kwargs...)
+    rect = Rectangle((-r.lon[1], r.lat[1]), r.lon[1]-r.lon[2], r.lat[2]-r.lat[1]; transform=platecarree, kwargs...)
+    ax.add_patch(rect)
+end
+
 function circlepoints(c::AbstractVector,a::Number,N::Int=100)
     # QQ is an othogonal matrix that rotates (1,0,0) to c
     A = [c I]
@@ -93,10 +107,12 @@ function circlegrid(ax, N=5)
     end
 end
 
-function mapfigure()
+function mapfigure(showgrid=true)
     fig, ax = plt.subplots(subplot_kw=Dict("projection"=>map_projection))
     ax.set_global()
-    circlegrid(ax)
+    if showgrid
+        circlegrid(ax)
+    end
     ax.background_patch.set_facecolor("lightgray")
     return fig, ax
 end
@@ -274,5 +290,42 @@ function plot_dist_projections(d, time, et=utc2et(time))
     fig, ax
 end
 
+#=
+function plot_view(x)
+    fig, ax = plot_dist(ipuidist(x))
+    plot_sun(ax)
+    plot_pluto(ax, x)
+end
+=#
+
+function diff_inten_ongrid(ax, grid, d, bin, cmap=plt.get_cmap("viridis"))
+    _dis = differential_intensity.(grid, Ref(bin), Ref(d))
+    @assert all(length.(_dis) .== 1)
+    dis = ustrip.(u"keV^-1*cm^-2*sr^-1*s^-1", getindex.(_dis, 1))
+    dismissing = [di != 0 ? di : missing for di in dis]
+    ldis = log10.(dismissing)
+    @show M = 4#maximum(skipmissing(ldis))
+    @show m = -2#minimum(skipmissing(ldis))
+    normalized_ldis = (ldis .- m) ./ (M - m)
+    for (square, value) in zip(grid, normalized_ldis)
+        plotshape(ax, square, color="gray", linewidth=0.5, alpha=0.75)
+        if value === missing
+            continue
+        end
+        plotshape_patch(ax, square, color=cmap(value))
+    end
+end
+
+polygoncolor(verts, C; kwargs...) = polygoncolor(plt.gca(), verts, C; kwargs...)
+function polygoncolor(ax::PyObject, verts, C::AbstractArray{<:Number, 1}; kwargs...)
+    if size(verts,1) != length(C)
+        error("Size mismatch. Got $(size(verts,1)) polygons and $(length(C)) colors.")
+    end
+    collection = mcoll.PolyCollection(verts; kwargs...)
+    collection.set_array(C)
+    ax.add_collection(collection)
+    ax.autoscale_view()
+    collection
+end
 
 end # module
