@@ -9,7 +9,7 @@ using StaticArrays
 using Random
 using Unitful
 using Unitful:Quantity, 𝐋, 𝐓, 𝐈, 𝐌, unit
-import PhysicalConstants.CODATA2018: m_p, e
+import PhysicalConstants.CODATA2018: G, k_B, m_p, e
 
 using ..PlutoUnits
 
@@ -102,9 +102,7 @@ function bounds_handler!(p, domain)
     end
 end
 
-σ(v) = 1e-15u"cm^2"
-nn(r) = 1e15*(1e15*(1u"Rp"/r)^25 + 5e9*(1u"Rp"/r)^8)u"km^-3"
-function advance!(particles, fields, domain, dt)
+function advance!(particles, fields, domain, dt, σ, nn)
     to_delete = Int[]
     for (i,p) in enumerate(particles)
         bounds_handler!(p, domain)
@@ -119,10 +117,10 @@ function advance!(particles, fields, domain, dt)
     deleteat!(particles, to_delete)
 end
 
-function trace_particles!(particles, add_particles!, fields, domain, dt, N; progress_bar=ProgressUnknown("Steps taken:"))
+function trace_particles!(particles, add_particles!, fields, domain, dt, N, σ, nn; progress_bar=ProgressUnknown("Steps taken:"))
     for i in 1:N
         add_particles!(particles)
-        advance!(particles, fields, domain, dt)
+        advance!(particles, fields, domain, dt, σ, nn)
         next!(progress_bar)
     end
     return particles
@@ -136,10 +134,10 @@ function empty_particle_list(sizehint=nothing)
     end
     return ret
 end
-function trace_particles(add_particles!, fields, domain, dt, N; progress_bar=Progress(N*nthreads()))
+function trace_particles(add_particles!, fields, domain, dt, N, σ, nn; progress_bar=Progress(N*nthreads()))
     list_of_ps = [empty_particle_list() for i in 1:nthreads()]
     @threads for thread in 1:nthreads()
-        trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N; progress_bar=progress_bar)
+        trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N, σ, nn; progress_bar=progress_bar)
     end
     ps = reduce(vcat, list_of_ps)
     finish!(progress_bar)
@@ -151,10 +149,10 @@ function splitsublists(x, n)
     [x[round(Int, (i-1)*s)+1:min(length(x), round(Int, i*s))] for i in 1:n]
 end
 
-function resume_trace!(ps, add_particles!, fields, domain, dt, N; progress_bar=Progress(N*nthreads()))
+function resume_trace!(ps, add_particles!, fields, domain, dt, N, σ, nn; progress_bar=Progress(N*nthreads()))
     list_of_ps = splitsublists(ps, nthreads())
     @threads for thread in 1:nthreads()
-        trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N; progress_bar)
+        trace_particles!(list_of_ps[threadid()], add_particles!, fields, domain, dt, N, σ, nn; progress_bar)
     end
     ps = reduce(vcat, list_of_ps)
     finish!(progress_bar)
