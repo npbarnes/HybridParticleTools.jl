@@ -138,9 +138,9 @@ end
 function plot_dist_hist(fig, ax, d;kwargs...)
     np = pyimport("numpy")
     l = -asunitless(d.v)
-    #H, xs, ys = np.histogram2d(mapcoords(l)..., bins=100, weights=ustrip.(d.n))
-    #ax.pcolormesh(xs, ys, H, transform=map_projection)
-    h, xs, ys, mappable = ax.hist2d(mapcoords(l)..., bins=100, weights=ustrip.(d.n); kwargs...)
+    H, xs, ys = np.histogram2d(mapcoords(l)..., bins=100, weights=ustrip.(d.n))
+    ax.pcolormesh(xs, ys, H, transform=map_projection)
+    #h, xs, ys, mappable = ax.hist2d(mapcoords(l)..., bins=100, weights=ustrip.(d.n); kwargs...)
     ax.set_global()
 end
 
