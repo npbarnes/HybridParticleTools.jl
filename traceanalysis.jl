@@ -1,20 +1,39 @@
 include("working.jl")
-dom = Boris.Domain(-50.0u"Rp", -32u"Rp", -50u"Rp", 20u"Rp", 32u"Rp", 50u"Rp")
-L = dom.max_x - dom.min_x
-transittime = L/400u"km/s"
-gyroperiod = 2pi*4m_p/(e*0.1u"nT")
-finaltime = 3transittime
-@show uconvert(u"s", finaltime)
-timestep = 20dt
-N = ceil(Int, finaltime/timestep)
-#shell_pg! = UnBufferedGenerator(shell, dom.max_x, 20.0u"km", (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 20000, step)
-dx = ([superthermal() for i in 1:1000000] |> a->getindex.(a,1) |> a->quantile(a,0.99)) * timestep
-superthermal_pg! = UnBufferedGenerator(shell, dom.max_x, dx, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 4500, timestep)
+include("samplers.jl")
+include("chex_defs.jl")
+using Serialization
+
+dom = Boris.Domain(-40.0u"Rp", -32u"Rp", -50u"Rp", 25u"Rp", 32u"Rp", 50u"Rp")
+
+function test_particle_simulation(path, fields,  dom, sampler, σ, nn)
+    L = dom.max_x - dom.min_x
+    transittime = L/400u"km/s"
+    gyroperiod = 2pi*4m_p/(e*0.1u"nT")
+    finaltime = 2transittime
+    timestep = 0.333u"s"
+    N = ceil(Int, finaltime/timestep)
+    dx = ([sampler() for i in 1:1000000] |> a->getindex.(a,1) |> a->quantile(a,0.99)) * timestep
+    pg! = UnBufferedGenerator(sampler, dom.max_x, dx, (dom.min_y,dom.max_y), (dom.min_z,dom.max_z), 3500, timestep)
+
+    ps = trace_particles(pg!, fields, dom, timestep, N, σ, nn)
+    serialize(path, ps)
+    ps
+end
+base_path = "/media/nathan/DATAPART11/testparticles"
 
 
-ps = trace_particles(superthermal_pg!, f, dom, timestep, N)
 
+for sampler in [:shell, :superthermal]
+    for nn in [:N_power_law, :N_bal_sat_esc, :N_bal_esc]
+        for σ in [:σ_standard, :σ_high]
+            name = join([sampler, nn, σ], "_")
+            filename = "$name.jls"
+            @eval test_particle_simulation(joinpath(base_path, $filename), f, dom, $sampler, $σ, $nn)
+        end
+    end
+end
 
+#=
 kd = KDTree([ustrip.(u"km",p.x) for p in ps], Chebyshev());
 
 function _traced_distribution(ps, kd, x, dx, N)
@@ -81,3 +100,4 @@ function plot_diff_inten_by_angle(θs, dis; bins=1:length(pepssi_bin_edges)-1)
     fig.legend()
     fig, ax
 end
+=#
