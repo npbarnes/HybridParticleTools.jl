@@ -1,6 +1,6 @@
 module SphericalShapes
 export  SphericalShape, SphericalPolygon, SPolygon, SCircle, Rotated, area, contains, vertices, edges, corners, inside,
-        r_transform
+        r_transform, latlon, SREAG_grid, LLAlignedRectangle
 
 using PyCall
 using StaticArrays
@@ -174,5 +174,102 @@ function contains(c::SCircle, P)
     return cosine >= c.cosangle
 end
 
+function latlon(P)
+    lat = atan(P[3], sqrt(P[1]^2 + P[2]^2))
+    lon = atan(P[2],P[1])
+    lat,lon
+end
+abstract type LatitudeLongitudePolygon <: SphericalShape end
+struct LLAlignedRectangle{T<:Number} <: LatitudeLongitudePolygon
+    lat::Tuple{T,T}
+    lon::Tuple{T,T}
+    function LLAlignedRectangle(lat::Tuple{T,T},lon::Tuple{T,T}) where T<:Number
+        @assert -π/2 <= lat[1] <= lat[2] <= π/2
+        @assert -π <= lon[1] <= π
+        @assert -π <= lon[2] <= π
+        new{T}(lat, lon)
+    end
+end
+function LLAlignedRectangle(lat, lon)
+    @assert length(lat) == 2
+    @assert length(lon) == 2
+    LLAlignedRectangle(lat[1],lat[2],lon[1],lon[2])
+end
+LLAlignedRectangle(lat1,lat2,lon1,lon2) = LLAlignedRectangle(promote(lat1, lat2, lon1, lon2)...)
+LLAlignedRectangle(lat1::T, lat2::T, lon1::T, lon2::T) where T = LLAlignedRectangle((lat1,lat2), (lon1,lon2))
+vertices(r::LLAlignedRectangle) = [
+    r.lon[1] r.lat[1];
+    r.lon[2] r.lat[1];
+    r.lon[2] r.lat[2];
+    r.lon[1] r.lat[2];
+    r.lon[1] r.lat[1]
+]
+
+_lat_okay(r,lat) = r.lat[1] < lat < r.lat[2]
+function _lon_okay(r,lon)
+    if r.lon[1] <= r.lon[2]
+        lon_okay = r.lon[1] <= lon < r.lon[2]
+    else
+        lon_okay = lon >= r.lon[1] || lon < r.lon[2]
+    end
+    lon_okay
+end
+
+function contains(r::LLAlignedRectangle, P)
+    lat,lon = latlon(P)
+    return _lat_okay(r,lat) && _lon_okay(r,lon)
+end
+function area(r::LLAlignedRectangle)
+    lon_diff = abs(r.lon[2] - r.lon[1])
+    if r.lon[2] < r.lon[1]
+        lon_diff = 2π - lon_diff
+    end
+    abs(sin(r.lat[1]) - sin(r.lat[2])) * lon_diff
+end
+
+_centers_fromedges(b) = [(b1+b2)/2 for (b1,b2) in zip(@view(b[begin:end-1]), @view(b[begin+1:end]))]
+"""Generate an equal area grid on the sphere using the SREAG method described in the paper:
+Malkin, Zinovy "A New Equal-area Isolatitudinal Grid on a Spherical Surface" The Astronomical Journal (2019)
+Two values are returned, `l,b`. `l` is an array of ranges where l[i] gives the longitudes of the cell
+boundaries on the ith row of cells. Longitude is taken to range from -π to π. `b` is the array of latitudes
+of cell boundaries. Latitude is taken to be in the range -π/2 to π/2.
+"""
+function _sphericalgrid_nodes(N_ring)
+    if N_ring % 2 == 1
+        error("Number of rings must be even. Got $(N_ring).")
+    end
+    dB = π/N_ring
+    b_init = -π/2:dB:π/2
+    dL_init = dB .* sec.(_centers_fromedges(b_init))
+    N_cell_row = round.(Int, 2π ./ dL_init)
+    N_cell = sum(N_cell_row)
+
+    A  = 4π/N_cell
+    dL = 2π ./ N_cell_row
+
+    b = similar(b_init)
+    b[1] = -π/2
+    for i in 1:(N_ring ÷ 2)
+        b[i+1] = asin(A/dL[i] + sin(b[i]))
+    end
+    b[N_ring÷2+2:end] = -reverse(b[begin:N_ring÷2])
+
+    l = [-π:dl:π for dl in dL]
+    l,b
+end
+function _gridsquares_latlon(l,b)
+    r = LLAlignedRectangle{eltype(b)}[]
+    for (i, row_l) in pairs(l)
+        for j in 1:(length(row_l)-1)
+            push!(r, LLAlignedRectangle((b[i], b[i+1]), (row_l[j], row_l[j+1])) )
+        end
+    end
+    r
+end
+
+function SREAG_grid(N)
+    l,b = _sphericalgrid_nodes(N)
+    _gridsquares_latlon(l,b)
+end
 
 end # module
