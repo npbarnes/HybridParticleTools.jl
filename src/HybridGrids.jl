@@ -82,8 +82,74 @@ function contravariant(maingrid::Grid{T}, field) where T # main cell edges
     )
 end
 
+_dgrid(maingrid) = diff.(maingrid.nodes)
+function _dcell(maingrid)
+    d = _dgrid(maingrid)
+    ret = similar.(maingrid.nodes)
+    for (i,q) in pairs(maingrid.nodes)
+        ret[i][begin] = d[i][begin]
+        ret[i][end] = d[i][end]
+        ret[i][begin+1:end-1] .= (
+            ((q[begin+2:end] .+ q[begin+1:end-1])./2)
+            .- ((q[begin+1:end-1] .+ q[begin:end-2])./2)
+        )
+    end
+    ret
+end
+function _ratios(maingrid)
+    ret = similar.(maingrid.nodes)
+    for (i,q) in pairs(maingrid.nodes)
+        ret[i] = similar(q)
+        ret[i][1] = 0.5
+        ret[i][end] = 0.5
+        plus = @views (q[3:end] .+ q[2:end-1])./2
+        minus = @views (q[2:end-1] .+ q[1:end-2])./2
+        ret[i][2:end-1] = @views (q[2:end-1] - minus)/(plus - minus)
+    end
+    ret
+end
+
 const α = e^2*μ_0/m_p
 Ep(Bp, cBp, np, up) = -(up - cBp/(α*np)) × Bp
+
+function calculate_Ep_ongrid(prefix, step=-1)
+    error("Maybe just delete this function, I never finished writing it")
+    # Grid stuff
+    para = ParameterSet(prefix)
+    nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
+    maingrid = Grid(nodes)
+
+    # B stuff (B is covariant)
+    _, B_data = hr(prefix, "bt").get_timestep(step)
+    mion = para.ion_amu
+    B = ustrip.(u"T", B_data.*u"s^-1".*(mion*m_p/e))
+
+    # ∇ × B stuff (cB is contravariant)
+    cB = similar(B, Union{Missing, eltype(B)})
+    cB .= missing
+    dx,dy,dz = _spacings(maingrid)
+    for i in 2:size(cB,1), j in 2:size(cB,2), k in 2:size(cB,3)
+        cB[i,j,k,1] = (B[i,j,k,3] - B[i,j-1,k,3])/dy[j] - (B[i,j,k,2] - B[i,j,k-1,2])/dz[k]
+        cB[i,j,k,2] = (B[i,j,k,1] - B[i,j,k-1,1])/dz[k] - (B[i,j,k,3] - B[i-1,j,k,3])/dx[i]
+        cB[i,j,k,3] = (B[i,j,k,2] - B[i-1,j,k,2])/dx[i] - (B[i,j,k,1] - B[i,j-1,k,1])/dy[j]
+    end
+
+    # density stuff (np_data is on main cell centers, so np_faces is on the main cell faces)
+    _, np_data = hr(prefix, "np").get_timestep(step)
+    np_faces = similar(B, Union{Missing, eltype(np_data)})
+    np_faces .= missing
+    np_faces[:,:,:,1] = 0.5*(np_data[1:end-1,:,:] + np_data[2:end,:,:])
+    np_faces[:,:,:,2] = 0.5*(np_data[:,1:end-1,:] + np_data[:,2:end,:])
+    np_faces[:,:,:,3] = 0.5*(np_data[:,:,1:end-1] + np_data[:,:,2:end])
+
+    # E stuff
+    aa = face_to_center(aj)
+    a = aa - up
+    btc = edge_to_center(B)
+    c = cross(a, btc)
+    E = c
+
+end
 
 function loadvector(prefix, name, step=-1)
     h = hr(prefix, name)
