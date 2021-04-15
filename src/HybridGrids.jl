@@ -58,7 +58,7 @@ struct VectorField{T,U,V}
     end
 end
 
-function covariant(maingrid::Grid, field)
+function covariant(maingrid::Grid, field) # main cell faces
     mx, my, mz = maingrid.nodes
     dx, dy, dz = _dualgrid(maingrid)
     VectorField(
@@ -68,7 +68,7 @@ function covariant(maingrid::Grid, field)
         field
     )
 end
-function contravariant(maingrid::Grid{T}, field) where T
+function contravariant(maingrid::Grid{T}, field) where T # main cell edges
     mx, my, mz = maingrid.nodes
     dx, dy, dz = _dualgrid(maingrid)
     VectorField(
