@@ -8,7 +8,7 @@ using Interpolations: extrapolate, Flat, Periodic
 using StaticArrays
 using Unitful
 using LinearAlgebra
-using PhysicalConstants.CODATA2018: m_p, e
+using PhysicalConstants.CODATA2018: m_p, e, μ_0
 
 using ..ParameterSets
 
@@ -82,6 +82,8 @@ function contravariant(maingrid::Grid{T}, field) where T # main cell edges
     )
 end
 
+const α = e^2*μ_0/m_p
+Ep(Bp, cBp, np, up) = -(up - cBp/(α*np)) × Bp
 
 function loadvector(prefix, name, step=-1)
     h = hr(prefix, name)
