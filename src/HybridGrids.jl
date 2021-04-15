@@ -31,7 +31,7 @@ struct YeeGrid{T}
 end
 function _ave(q)
     ret = similar(q)
-    ret[1:end-1] = 0.5*(q[1:end-1] + q[1+1:end])
+    @. ret[1:end-1] = @views 0.5 * (q[1:end-1] + q[1+1:end])
     ret[end] = q[end] + (q[end] - ret[end-1])
     return ret
 end
