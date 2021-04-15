@@ -57,6 +57,9 @@ struct VectorField{T,U,V}
         new{T,U,V}(gx, gy, gz, F, xinterp, yinterp, zinterp)
     end
 end
+function (f::VectorField)(x, y, z)
+    SA[f.xinterp(x, y, z), f.yinterp(x, y, z), f.zinterp(x, y, z)]
+end
 
 function covariant(maingrid::Grid, field) # main cell faces
     mx, my, mz = maingrid.nodes
@@ -79,9 +82,6 @@ function contravariant(maingrid::Grid{T}, field) where T # main cell edges
     )
 end
 
-function (f::VectorField)(x, y, z)
-    SA[f.xinterp(x, y, z), f.yinterp(x, y, z), f.zinterp(x, y, z)]
-end
 
 function loadvector(prefix, name, step=-1)
     h = hr(prefix, name)
