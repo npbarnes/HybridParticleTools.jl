@@ -22,13 +22,7 @@ struct Grid{T}
     nodes::NTuple{3, Vector{T}}
 end
 Grid(x,y,z) = Grid((x,y,z))
-struct YeeGrid{T}
-    maingrid::Grid{T}
-    dualgrid::Grid{T}
-    function YeeGrid(maingrid::Grid{T}) where T
-        new{T}(maingrid, _dualgrid(maingrid))
-    end
-end
+
 function _ave(q)
     ret = similar(q)
     @. ret[1:end-1] = @views 0.5 * (q[1:end-1] + q[1+1:end])
