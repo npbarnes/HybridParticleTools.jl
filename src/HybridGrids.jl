@@ -1,6 +1,6 @@
 module HybridGrids
 
-export loadfields, loadvector, loadfields2, loadscalar, VectorField
+export loadfields, loadvector, loadscalar, VectorField, Covariant, Contravariant, curl, loadB, loadE
 
 using PyCall
 using Interpolations
@@ -29,121 +29,93 @@ function _ave(q)
     ret[end] = q[end] + (q[end] - ret[end-1])
     return ret
 end
-function _dualgrid(g::Grid)
+function dualgrid(g::Grid)
     (_ave(g.nodes[1]), _ave(g.nodes[2]), _ave(g.nodes[3]))
 end
 
-struct VectorField{T,U,V}
-    xgrid::Grid{T}
-    ygrid::Grid{T}
-    zgrid::Grid{T}
-    F::Array{U, 4}
-    xinterp::V
-    yinterp::V
-    zinterp::V
-    function VectorField(gx::Grid{T},gy,gz, F::AbstractArray{U,4}) where {T,U}
+abstract type VectorField{G,D,I} end
+
+struct Covariant{G,D,I} <: VectorField{G,D,I}
+    maingrid::Grid{G}
+    data::Array{D,4}
+    xinterp::I
+    yinterp::I
+    zinterp::I
+    function Covariant(maingrid::Grid{G}, data::AbstractArray{D,4}) where {G,D}
+        mx, my, mz = maingrid.nodes
+        dx, dy, dz = dualgrid(maingrid)
         @views begin
-            xinterp = extrapolate(interpolate(gx.nodes, F[:,:,:,1], Gridded(Linear())), Flat())
-            yinterp = extrapolate(interpolate(gy.nodes, F[:,:,:,2], Gridded(Linear())), Flat())
-            zinterp = extrapolate(interpolate(gz.nodes, F[:,:,:,3], Gridded(Linear())), Flat())
+            xinterp = extrapolate(interpolate((mx, dy, dz), data[:,:,:,1], Gridded(Linear())), Flat())
+            yinterp = extrapolate(interpolate((dx, my, dz), data[:,:,:,2], Gridded(Linear())), Flat())
+            zinterp = extrapolate(interpolate((dx, dy, mz), data[:,:,:,3], Gridded(Linear())), Flat())
         end
         V = typeof(xinterp)
-        new{T,U,V}(gx, gy, gz, F, xinterp, yinterp, zinterp)
+        new{G,D,V}(maingrid, data, xinterp, yinterp, zinterp)
     end
 end
+
+struct Contravariant{G,D,I} <: VectorField{G,D,I}
+    maingrid::Grid{G}
+    data::Array{D,4}
+    xinterp::I
+    yinterp::I
+    zinterp::I
+    function Contravariant(maingrid::Grid{G}, data::AbstractArray{D,4}) where {G,D}
+        mx, my, mz = maingrid.nodes
+        dx, dy, dz = dualgrid(maingrid)
+        @views begin
+            xinterp = extrapolate(interpolate((dx, my, mz), data[:,:,:,1], Gridded(Linear())), Flat())
+            yinterp = extrapolate(interpolate((mx, dy, mz), data[:,:,:,2], Gridded(Linear())), Flat())
+            zinterp = extrapolate(interpolate((mx, my, dz), data[:,:,:,3], Gridded(Linear())), Flat())
+        end
+        V = typeof(xinterp)
+        new{G,D,V}(maingrid, data, xinterp, yinterp, zinterp)
+    end
+end
+
 function (f::VectorField)(x, y, z)
     SA[f.xinterp(x, y, z), f.yinterp(x, y, z), f.zinterp(x, y, z)]
 end
 
-function covariant(maingrid::Grid, field) # main cell faces
-    mx, my, mz = maingrid.nodes
-    dx, dy, dz = _dualgrid(maingrid)
-    VectorField(
-        Grid(mx, dy, dz),
-        Grid(dx, my, dz),
-        Grid(dx, dy, mz),
-        field
-    )
-end
-function contravariant(maingrid::Grid{T}, field) where T # main cell edges
-    mx, my, mz = maingrid.nodes
-    dx, dy, dz = _dualgrid(maingrid)
-    VectorField(
-        Grid(dx, my, mz),
-        Grid(mx, dy, mz),
-        Grid(mx, my, dz),
-        field
-    )
+function spacings(g)
+    dx_cells = similar(g.nodes[1], Union{Missing, eltype(g.nodes[1])})
+    dy_cells = similar(g.nodes[2], Union{Missing, eltype(g.nodes[2])})
+    dz_cells = similar(g.nodes[3], Union{Missing, eltype(g.nodes[3])})
+    ret = (dx_cells, dy_cells, dz_cells)
+    for (i,q) in pairs(g.nodes)
+        @. ret[i][2:end-1] = @views ((q[3:end] + q[2:end-1])/2) - ((q[2:end-1] + q[1:end-2])/2)
+        ret[i][1] = missing
+        ret[i][end] = missing
+    end
+    ret
 end
 
-_dgrid(maingrid) = diff.(maingrid.nodes)
-function _dcell(maingrid)
-    d = _dgrid(maingrid)
-    ret = similar.(maingrid.nodes)
-    for (i,q) in pairs(maingrid.nodes)
-        ret[i][begin] = d[i][begin]
-        ret[i][end] = d[i][end]
-        ret[i][begin+1:end-1] .= (
-            ((q[begin+2:end] .+ q[begin+1:end-1])./2)
-            .- ((q[begin+1:end-1] .+ q[begin:end-2])./2)
-        )
+function curl(vf::Covariant)
+    mx, my, mz = vf.maingrid.nodes
+    dx, dy, dz = dualgrid(vf.maingrid)
+    c = similar(vf.data, Union{Missing, eltype(vf.data)})
+    c .= missing
+    dx,dy,dz = spacings(vf.maingrid)
+    for i in 2:size(c,1), j in 2:size(c,2), k in 2:size(c,3)
+        c[i,j,k,1] = (vf.data[i,j,k,3] - vf.data[i,j-1,k,3])/dy[j] - (vf.data[i,j,k,2] - vf.data[i,j,k-1,2])/dz[k]
+        c[i,j,k,2] = (vf.data[i,j,k,1] - vf.data[i,j,k-1,1])/dz[k] - (vf.data[i,j,k,3] - vf.data[i-1,j,k,3])/dx[i]
+        c[i,j,k,3] = (vf.data[i,j,k,2] - vf.data[i-1,j,k,2])/dx[i] - (vf.data[i,j,k,1] - vf.data[i,j-1,k,1])/dy[j]
     end
-    ret
-end
-function _ratios(maingrid)
-    ret = similar.(maingrid.nodes)
-    for (i,q) in pairs(maingrid.nodes)
-        ret[i] = similar(q)
-        ret[i][1] = 0.5
-        ret[i][end] = 0.5
-        plus = @views (q[3:end] .+ q[2:end-1])./2
-        minus = @views (q[2:end-1] .+ q[1:end-2])./2
-        ret[i][2:end-1] = @views (q[2:end-1] - minus)/(plus - minus)
-    end
-    ret
+    Contravariant(vf.maingrid, c)
 end
 
 const α = e^2*μ_0/m_p
-Ep(Bp, cBp, np, up) = -(up - cBp/(α*np)) × Bp
+Ep(Bp, cBp, np, up, α) = -(up - cBp/(α*np)) × Bp
+Ep(Bp::AbstractVector{<:Quantity}, cBp::AbstractVector{<:Quantity}, np::AbstractVector{<:Quantity}, up::AbstractVector{<:Quantity}) = Ep(Bp,cBp,np,up,α)
+Ep(Bp, cBp, np, up) = Ep(Bp, cBp, np, up, ustrip(u"C*T*km*s/kg", α))
 
-function calculate_Ep_ongrid(prefix, step=-1)
-    error("Maybe just delete this function, I never finished writing it")
-    # Grid stuff
-    para = ParameterSet(prefix)
-    nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
-    maingrid = Grid(nodes)
-
-    # B stuff (B is covariant)
-    _, B_data = hr(prefix, "bt").get_timestep(step)
-    mion = para.ion_amu
-    B = ustrip.(u"T", B_data.*u"s^-1".*(mion*m_p/e))
-
-    # ∇ × B stuff (cB is contravariant)
-    cB = similar(B, Union{Missing, eltype(B)})
-    cB .= missing
-    dx,dy,dz = _spacings(maingrid)
-    for i in 2:size(cB,1), j in 2:size(cB,2), k in 2:size(cB,3)
-        cB[i,j,k,1] = (B[i,j,k,3] - B[i,j-1,k,3])/dy[j] - (B[i,j,k,2] - B[i,j,k-1,2])/dz[k]
-        cB[i,j,k,2] = (B[i,j,k,1] - B[i,j,k-1,1])/dz[k] - (B[i,j,k,3] - B[i-1,j,k,3])/dx[i]
-        cB[i,j,k,3] = (B[i,j,k,2] - B[i-1,j,k,2])/dx[i] - (B[i,j,k,1] - B[i,j-1,k,1])/dy[j]
-    end
-
-    # density stuff (np_data is on main cell centers, so np_faces is on the main cell faces)
-    _, np_data = hr(prefix, "np").get_timestep(step)
-    np_faces = similar(B, Union{Missing, eltype(np_data)})
-    np_faces .= missing
-    np_faces[:,:,:,1] = 0.5*(np_data[1:end-1,:,:] + np_data[2:end,:,:])
-    np_faces[:,:,:,2] = 0.5*(np_data[:,1:end-1,:] + np_data[:,2:end,:])
-    np_faces[:,:,:,3] = 0.5*(np_data[:,:,1:end-1] + np_data[:,:,2:end])
-
-    # E stuff
-    aa = face_to_center(aj)
-    a = aa - up
-    btc = edge_to_center(B)
-    c = cross(a, btc)
-    E = c
-
+struct E_Field{T,U,V,Q}
+    B::T
+    cB::U
+    u_i::V
+    n_i::Q
 end
+(F::E_Field)(x,y,z) = Ep(F.B(x,y,z), F.cB(x,y,z), F.n_i(x,y,z), F.u_i(x,y,z))
 
 function loadvector(prefix, name, step=-1)
     h = hr(prefix, name)
@@ -167,39 +139,26 @@ end
 
 # There was a problem writing bt data for 2020-Jan-23/pluto-2.
 # Timestep 27 is the last good step.
-function loadfields2(prefix, step=-1)
-    _, E_data = hr(prefix, "E").get_timestep(step)
+function loadB(prefix, step=-1)
     _, B_data = hr(prefix, "bt").get_timestep(step)
     para = ParameterSet(prefix)
     mion = para.ion_amu
-    E_data = ustrip.(u"V/m", E_data.*u"km/s^2".*(mion*m_p/e))
     B_data = ustrip.(u"T", B_data.*u"s^-1".*(mion*m_p/e))
     nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
     maingrid = Grid(nodes)
-    E = contravariant(maingrid, E_data)
-    B = covariant(maingrid, B_data)
-    return E,B
+    B = Covariant(maingrid, B_data)
+    return B
 end
-
+function loadE(prefix, step=-1, B=loadB(prefix, step))
+    cB = curl(B)
+    u_i = loadvector(prefix, "up", step)
+    n_i = loadscalar(prefix, "np", step)
+    E_Field(B,cB,u_i,n_i)
+end
 function loadfields(prefix, step=-1)
-    E_data = loadvector(prefix, "E", step)u"km/s^2" * (m_p/e)
-    B_data = loadvector(prefix, "bt", step)u"s^-1" * (m_p/e)
-    E_data = [uconvert.(u"V/m", dat) for dat in E_data]
-    B_data = [uconvert.(u"T", dat) for dat in B_data]
-    para = ParameterSet(prefix)
-    nodes = Tuple(convert(Array{Float64}, gp)*u"km" for gp in para.grid_points)
-    E = interpolate(nodes, E_data, Gridded(Linear()))
-    B = interpolate(nodes, B_data, Gridded(Linear()))
-
-    # Fixed extrapolations are broken in Interpolations.jl
-    #Bsw = SA[0.0, Float64(para.b0_init), 0.0]u"T"
-    #Esw = -SA[-Float64(para.vsw), 0.0, 0.0]u"km/s" × Bsw
-
-    E = extrapolate(E, Flat())
-    B = extrapolate(B, Flat())
-    return E,B
+    B = loadB(prefix, step)
+    E = loadE(prefix, step, B)
+    E,B
 end
-
-
 
 end # module
