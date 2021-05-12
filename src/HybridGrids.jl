@@ -1,6 +1,6 @@
 module HybridGrids
 
-export loadfields, loadvector, loadscalar, VectorField, Covariant, Contravariant, curl, loadB, loadE
+export loadfields, loadvector, loadscalar, VectorField, Covariant, Contravariant, curl, loadB, loadE, Covariant_fromfunction
 
 using PyCall
 using Interpolations
@@ -53,6 +53,28 @@ struct Covariant{G,D,I} <: VectorField{G,D,I}
         new{G,D,V}(maingrid, data, xinterp, yinterp, zinterp)
     end
 end
+function Base.:+(a::Covariant, b::Covariant)
+    @assert a.maingrid == b.maingrid
+    Covariant(a.maingrid, a.data .+ b.data)
+end
+
+Covariant_fromfunction(maingrid, f) = Covariant_fromfunction(maingrid, (x,y,z)->f(x,y,z)[1], (x,y,z)->f(x,y,z)[2], (x,y,z)->f(x,y,z)[3])
+function Covariant_fromfunction(maingrid, fx, fy, fz)
+    mx, my, mz = maingrid.nodes
+    dx, dy, dz = dualgrid(maingrid)
+    data = Array{Float64,4}(undef, length(mx), length(my), length(mz), 3)
+    for (i,x) in pairs(mx), (j,y) in pairs(dy), (k,z) in pairs(dz)
+        data[i,j,k,1] = fx(x,y,z)
+    end
+    for (i,x) in pairs(dx), (j,y) in pairs(my), (k,z) in pairs(dz)
+        data[i,j,k,2] = fy(x,y,z)
+    end
+    for (i,x) in pairs(dx), (j,y) in pairs(dy), (k,z) in pairs(mz)
+        data[i,j,k,3] = fz(x,y,z)
+    end
+    Covariant(maingrid, data)
+end
+
 
 struct Contravariant{G,D,I} <: VectorField{G,D,I}
     maingrid::Grid{G}
