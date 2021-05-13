@@ -1,7 +1,7 @@
 module PlottingTools
 export  plt, circlegrid, map_projection, vec_coords, geodetic, mapcoords, ccrs, plotdist, plotshape,
         plot_colored_line, mapfigure, plot_dist, plot_dist_hist, plot_pepssi, plot_sun, plot_pluto, especfigure,
-        plot_espec_scatter, plot_pepssi_view, datefigure, plotshape_patch, diff_inten_ongrid, platecarree, polygoncolor
+        plot_espec_scatter, plot_pepssi_view, datefigure, plotshape_patch, diff_inten_ongrid, platecarree, polygoncolor, LogNorm
 
 using PyCall
 using PyPlot
