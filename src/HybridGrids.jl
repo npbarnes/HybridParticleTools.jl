@@ -126,10 +126,8 @@ function curl(vf::Covariant)
     Contravariant(vf.maingrid, c)
 end
 
-const α = e^2*μ_0/m_p
-Ep(Bp, cBp, np, up, α) = -(up - cBp/(α*np)) × Bp
-Ep(Bp::AbstractVector{<:Quantity}, cBp::AbstractVector{<:Quantity}, np::AbstractVector{<:Quantity}, up::AbstractVector{<:Quantity}) = Ep(Bp,cBp,np,up,α)
-Ep(Bp, cBp, np, up) = Ep(Bp, cBp, np, up, ustrip(u"C*T*km*s/kg", α))
+Ep(Bp::AbstractVector{<:Quantity}, cBp::AbstractVector{<:Quantity}, np::Quantity, up::AbstractVector{<:Quantity}) = -(up - cBp/(e*μ_0*np)) × Bp
+Ep(Bp::AbstractVector{<:Number}, cBp::AbstractVector{<:Number}, np::Number, up::AbstractVector{<:Number}) = ustrip.(u"V/m", Ep(Bp*u"T", cBp*u"T/km", np*u"km^-3", up*u"km/s"))
 
 struct E_Field{T,U,V,Q}
     B::T
@@ -149,14 +147,14 @@ function loadvector(prefix, name, step=-1)
     para  = ParameterSet(prefix)
     nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
 
-    interpolate(nodes, data, Gridded(Linear()))
+    extrapolate(interpolate(nodes, data, Gridded(Linear())), Flat())
 end
 
 function loadscalar(prefix, name, step=-1)
     _, data = hr(prefix, name).get_timestep(step)
     para = ParameterSet(prefix)
     nodes = Tuple(convert(Array{Float64}, gp) for gp in para.grid_points)
-    interpolate(nodes, data, Gridded(Linear()))
+    extrapolate(interpolate(nodes, data, Gridded(Linear())), Flat())
 end
 
 # There was a problem writing bt data for 2020-Jan-23/pluto-2.
@@ -171,7 +169,7 @@ function loadB(prefix, step=-1)
     B = Covariant(maingrid, B_data)
     return B
 end
-function loadE(prefix, step=-1, B=loadB(prefix, step))
+function loadE(prefix, step=-1; B=loadB(prefix, step))
     cB = curl(B)
     u_i = loadvector(prefix, "up", step)
     n_i = loadscalar(prefix, "np", step)
