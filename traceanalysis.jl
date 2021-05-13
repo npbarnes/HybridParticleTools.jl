@@ -1,14 +1,15 @@
-include("working.jl")
+include("use_stuff.jl")
 include("samplers.jl")
 include("chex_defs.jl")
-using Serialization
+include("dipoles.jl")
+B_dip = Dipole(SA[0.0,0.0, 4π*ustrip(u"km", 1u"Rp")^3*ustrip(u"T", 30u"nT")/ustrip(u"kg*km*s^-2*A^-2", μ_0)])
 
-dom = Boris.Domain(-40.0u"Rp", -32u"Rp", -50u"Rp", 25u"Rp", 32u"Rp", 50u"Rp")
+dom = Boris.Domain(-100.0u"Rp", -50u"Rp", -50u"Rp", 20u"Rp", 50u"Rp", 50u"Rp")
 
 function test_particle_simulation(path, fields,  dom, sampler, σ, nn)
     L = dom.max_x - dom.min_x
     transittime = L/400u"km/s"
-    gyroperiod = 2pi*4m_p/(e*0.1u"nT")
+    #gyroperiod = 2pi*4m_p/(e*0.1u"nT")
     finaltime = 2transittime
     timestep = 0.333u"s"
     N = ceil(Int, finaltime/timestep)
@@ -21,16 +22,41 @@ function test_particle_simulation(path, fields,  dom, sampler, σ, nn)
 end
 base_path = "/media/nathan/DATAPART11/testparticles"
 
+high_imf = "/home/nathan/data/pre-2019/2017-Mon-Nov-13/pluto-7/data"
+medium_imf = "/home/nathan/data/pre-2019/2018-Fri-Jan-26/pluto-1/data"
+low_imf = "/home/nathan/data/pre-2019/2017-Mon-Nov-13/pluto-7/data"
 
-
+B_hyb = loadB(high_imf)
+B = B_hyb + Covariant_fromfunction(B_hyb.maingrid, B_dip)
+E = loadE(high_imf; B)
+f = Boris.Fields(E,B)
 for sampler in [:shell, :superthermal]
-    for nn in [:N_power_law, :N_bal_sat_esc, :N_bal_esc]
-        for σ in [:σ_standard, :σ_high]
-            name = join([sampler, nn, σ], "_")
-            filename = "$name.jls"
-            @eval test_particle_simulation(joinpath(base_path, $filename), f, dom, $sampler, $σ, $nn)
-        end
-    end
+    (σ, nn) = (:σ_standard, :N_power_law)
+    name = join([sampler, nn, σ], "_")
+    filename = "$name.jls"
+    @eval test_particle_simulation(joinpath(base_path, "dipole_added", "high_IMF", $filename), f, dom, $sampler, $σ, $nn)
+end
+
+B_hyb = loadB(medium_imf)
+B = B_hyb + Covariant_fromfunction(B_hyb.maingrid, B_dip)
+E = loadE(medium_imf; B)
+f = Boris.Fields(E,B)
+for sampler in [:shell, :superthermal]
+    (σ, nn) = (:σ_standard, :N_power_law)
+    name = join([sampler, nn, σ], "_")
+    filename = "$name.jls"
+    @eval test_particle_simulation(joinpath(base_path, "dipole_added", "medium_IMF", $filename), f, dom, $sampler, $σ, $nn)
+end
+
+B_hyb = loadB(low_imf)
+B = B_hyb + Covariant_fromfunction(B_hyb.maingrid, B_dip)
+E = loadE(low_imf; B)
+f = Boris.Fields(E,B)
+for sampler in [:shell, :superthermal]
+    (σ, nn) = (:σ_standard, :N_power_law)
+    name = join([sampler, nn, σ], "_")
+    filename = "$name.jls"
+    @eval test_particle_simulation(joinpath(base_path, "dipole_added", "low_IMF", $filename), f, dom, $sampler, $σ, $nn)
 end
 
 #=
