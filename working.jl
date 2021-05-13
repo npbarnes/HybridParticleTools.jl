@@ -1,27 +1,4 @@
-using HybridTools
-using Dates
-using PyCall
-using PyPlot
-using StaticArrays
-using Unitful
-using LinearAlgebra
-using Statistics
-using NearestNeighbors
-using Random
-using Base.Threads
-using IterTools: firstrest
-using Distributions: Pareto
-import PhysicalConstants.CODATA2018: m_p, e
-
-using HybridTools.SphericalShapes
-using HybridTools.Utility
-using HybridTools.Sensors
-using HybridTools.PlottingTools
-using HybridTools.HybridGrids
-using HybridTools.Boris
-using HybridTools.ParameterSets
-using HybridTools.PlutoUnits
-using HybridTools.Spacecraft
+include("use_stuff.jl")
 
 # approx bins for PEPSSI Helium (I assume that means signly ionized):
 const pepssi_bin_names = ["L13", "L11", "L09", "L07", "L05", "L03", "L01"]
@@ -29,10 +6,11 @@ const pepssi_bin_edges = [2.2, 4.79, 9.485, 18.05, 33.4, 59.8, 106, 183]u"keV"
 const pepssi_S0_area = 0.092677
 
 #folder = "/media/nathan/DATAPART11/2020-Thu-Jan-23/pluto-2"
-folder = "/media/nathan/DATAPART11/2020-Mon-Aug-10/pluto-1"
+#folder = "/media/nathan/DATAPART11/2020-Mon-Aug-10/pluto-1"
+#folder = "/home/nathan/data/pre-2019/2017-Mon-Nov-13/pluto-7"
 #const np = pyimport("numpy")
 #const st = pyimport("spice_tools")
-const s = Simulation(folder, n=6)
+#const s = Simulation(folder, n=6)
 
 #const pepssifov = fov_polygon("NH_PEPSSI_S0", st.nh_in_wake)
 #const swapfov = fov_polygon("NH_SWAP", st.nh_in_wake)
@@ -62,11 +40,11 @@ ch4dist(pos::AbstractVector) = ch4dist(Distribution(s,pos, s.dx*u"km"))
 ch4dist(et::Number) = ch4dist(location(et))
 
 
-prefix = joinpath(folder,"data")
+#prefix = joinpath(folder,"data")
 #const para = ParameterSet(prefix)
 #const dt = Float64(para.dt)*u"s"
-E,B = loadfields2(prefix)
-f = Boris.Fields(E,B)
+#E,B = loadfields(prefix)
+#f = Boris.Fields(E,B)
 #const dom = Boris.Domain(Tuple(t.*u"km" for t in extrema.(E.xgrid.nodes)))
 
 function todaysplot(time::String)
